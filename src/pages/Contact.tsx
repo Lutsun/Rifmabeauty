@@ -1,32 +1,106 @@
-import { Mail, MapPin, Phone, Instagram, Facebook } from 'lucide-react';
+import { Mail, MapPin, Phone, Instagram, Facebook, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Contact() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus(null);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSubmitStatus({ 
+          type: 'success', 
+          message: 'Message envoyé avec succès! Nous vous répondrons rapidement.' 
+        });
+        setFormData({ name: '', email: '', phone: '', message: '' });
+      } else {
+        setSubmitStatus({ 
+          type: 'error', 
+          message: data.message || 'Erreur lors de l\'envoi du message' 
+        });
+      }
+    } catch (error) {
+      setSubmitStatus({ 
+        type: 'error', 
+        message: 'Erreur de connexion au serveur. Vérifiez que le serveur backend est démarré.' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim()) return;
+
+    try {
+      const response = await fetch('http://localhost:5000/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ email: newsletterEmail }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('🎉 Merci pour votre inscription à la newsletter!');
+        setNewsletterEmail('');
+      } else {
+        alert('❌ ' + (data.message || 'Erreur lors de l\'inscription'));
+      }
+    } catch (error) {
+      alert('❌ Erreur de connexion au serveur');
+    }
+  };
+
   return (
     <div className="min-h-screen pt-20 bg-white">
       <section className="relative py-32 overflow-hidden">
-      <div className="absolute inset-0 bg-stone-900">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            // Image plus adaptée pour "Contact"
-            backgroundImage: 'url(/assets/images/lipbalm4.JPG)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/70" />
+        <div className="absolute inset-0 bg-stone-900">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: 'url(/assets/images/lipbalm4.JPG)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/70" />
+          </div>
         </div>
-      </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-        <h1 className="text-5xl md:text-6xl font-light tracking-wider text-white">
-          Contactez-nous
-        </h1>
-        <p className="text-lg font-light text-white/90 max-w-2xl mx-auto leading-relaxed">
-          Notre équipe est à votre écoute pour répondre à toutes vos questions
-        </p>
-      </div>
-    </section>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <h1 className="text-5xl md:text-6xl font-light tracking-wider text-white">
+            Contactez-nous
+          </h1>
+          <p className="text-lg font-light text-white/90 max-w-2xl mx-auto leading-relaxed">
+            Notre équipe est à votre écoute pour répondre à toutes vos questions
+          </p>
+        </div>
+      </section>
 
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,58 +110,93 @@ export default function Contact() {
                 <h2 className="text-3xl font-light tracking-wide text-gray-900 mb-8">
                   Envoyez-nous un message
                 </h2>
-                <form className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
-                      Nom complet
+                    <label htmlFor="name" className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
+                      Nom complet *
                     </label>
                     <input
+                      id="name"
                       type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
                       className="w-full px-4 py-3 border border-gray-300 focus:border-rose-400 focus:outline-none transition-colors"
                       placeholder="Votre nom"
+                      required
+                      disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
-                      Email
+                    <label htmlFor="email" className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
+                      Email *
                     </label>
                     <input
+                      id="email"
                       type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
                       className="w-full px-4 py-3 border border-gray-300 focus:border-rose-400 focus:outline-none transition-colors"
                       placeholder="votre@email.com"
+                      required
+                      disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
+                    <label htmlFor="phone" className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
                       Téléphone
                     </label>
                     <input
+                      id="phone"
                       type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
                       className="w-full px-4 py-3 border border-gray-300 focus:border-rose-400 focus:outline-none transition-colors"
                       placeholder="+221 xx xx xx xx"
+                      disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
-                      Message
+                    <label htmlFor="message" className="block text-sm font-light tracking-wider uppercase text-gray-700 mb-2">
+                      Message *
                     </label>
                     <textarea
+                      id="message"
                       rows={6}
+                      value={formData.message}
+                      onChange={(e) => setFormData({...formData, message: e.target.value})}
                       className="w-full px-4 py-3 border border-gray-300 focus:border-rose-400 focus:outline-none transition-colors resize-none"
                       placeholder="Votre message..."
+                      required
+                      disabled={isSubmitting}
                     />
                   </div>
 
+                  {submitStatus && (
+                    <div className={`p-4 rounded ${submitStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                      {submitStatus.message}
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    className="w-full bg-black text-white py-4 px-8 hover:bg-gray-900 transition-all duration-300"
+                    disabled={isSubmitting}
+                    className="w-full bg-black text-white py-4 px-8 hover:bg-gray-900 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    <span className="text-sm font-light tracking-widest uppercase">
-                      Envoyer le message
-                    </span>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="text-sm font-light tracking-widest uppercase">
+                          Envoi en cours...
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-sm font-light tracking-widest uppercase">
+                        Envoyer le message
+                      </span>
+                    )}
                   </button>
                 </form>
               </div>
@@ -123,7 +232,7 @@ export default function Contact() {
                         Téléphone
                       </h3>
                       <p className="text-gray-600 font-light">
-                        +211 78 717 10 10
+                        +221 78 717 10 10
                       </p>
                     </div>
                   </div>
@@ -150,19 +259,23 @@ export default function Contact() {
                 </h3>
                 <div className="flex space-x-4">
                   <a
-                    href="#"
+                    href="https://instagram.com/rifmabeauty"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-12 h-12 bg-stone-100 hover:bg-rose-100 rounded-full flex items-center justify-center transition-colors group"
                   >
                     <Instagram className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
                   </a>
                   <a
-                    href="#"
+                    href="https://facebook.com/rifmabeauty"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-12 h-12 bg-stone-100 hover:bg-rose-100 rounded-full flex items-center justify-center transition-colors group"
                   >
                     <Facebook className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
                   </a>
                   <a
-                    href="#"
+                    href="mailto:contact@rifmabeauty.com"
                     className="w-12 h-12 bg-stone-100 hover:bg-rose-100 rounded-full flex items-center justify-center transition-colors group"
                   >
                     <Mail className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
@@ -178,11 +291,14 @@ export default function Contact() {
                   Inscrivez-vous à notre newsletter pour recevoir nos dernières nouveautés
                   et offres exclusives.
                 </p>
-                <form className="flex space-x-2">
+                <form onSubmit={handleNewsletterSubmit} className="flex space-x-2">
                   <input
                     type="email"
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
                     placeholder="Votre email"
                     className="flex-1 px-4 py-3 border border-gray-300 focus:border-rose-400 focus:outline-none transition-colors"
+                    required
                   />
                   <button
                     type="submit"

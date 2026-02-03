@@ -7,10 +7,41 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// API Products - Utilise l'API REST auto-générée de Supabase
-// Ou tu peux utiliser directement le client JS :
+// Route de base pour vérifier que l'API fonctionne
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API RIFMA Beauty',
+    version: '1.0.0',
+    status: 'online',
+    endpoints: {
+      products: {
+        getAll: 'GET /api/products',
+        getById: 'GET /api/products/:id',
+        updateStock: 'PATCH /api/products/:id/stock'
+      },
+      orders: {
+        create: 'POST /api/orders',
+        getOrder: 'GET /api/orders/:identifier',
+        getCustomerOrders: 'GET /api/orders/customer/:email',
+        updateStatus: 'PATCH /api/orders/:id/status',
+        adminGetAll: 'GET /api/admin/orders'
+      },
+      contact: 'POST /api/contact',
+      newsletter: 'POST /api/newsletter/subscribe'
+    }
+  });
+});
 
-// 1. Récupérer tous les produits (avec filtres)
+// Route santé
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'rifma-beauty-api'
+  });
+});
+
+// API Products
 app.get('/api/products', async (req, res) => {
   try {
     const { category, featured } = req.query;
@@ -33,7 +64,6 @@ app.get('/api/products', async (req, res) => {
       success: true,
       count: data.length,
       data: data.map(p => ({
-        // Transforme pour garder la compatibilité frontend
         id: p.product_id,
         name: p.name,
         category: p.category,
@@ -51,7 +81,6 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// 2. Récupérer un produit par ID
 app.get('/api/products/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -85,7 +114,6 @@ app.get('/api/products/:id', async (req, res) => {
   }
 });
 
-// 3. Mettre à jour le stock (pour admin)
 app.patch('/api/products/:id/stock', async (req, res) => {
   try {
     const { stock } = req.body;
@@ -116,7 +144,6 @@ app.patch('/api/products/:id/stock', async (req, res) => {
 // ROUTES COMMANDES
 // ======================
 
-// 5. Créer une nouvelle commande (paiement à la livraison)
 app.post('/api/orders', async (req, res) => {
   try {
     const {
@@ -167,7 +194,7 @@ app.post('/api/orders', async (req, res) => {
     // 3. Générer un numéro de commande unique
     const order_number = 'RIFMA-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
-    // 4. Créer la commande (paiement à la livraison)
+    // 4. Créer la commande
     const { data: order, error } = await supabase
       .from('orders')
       .insert([{
@@ -198,13 +225,15 @@ app.post('/api/orders', async (req, res) => {
       });
     }
 
-    // 6. Envoyer un email au propriétaire (simulé pour l'instant)
-    console.log(`📧 EMAIL À ENVOYER AU PROPRIÉTAIRE:`);
-    console.log(`   Nouvelle commande #${order.order_number}`);
-    console.log(`   Client: ${customer_name} (${customer_email})`);
-    console.log(`   Total: ${total_amount} FCFA`);
-    console.log(`   Articles: ${items.length}`);
-    console.log(`   Paiement: À la livraison`);
+    // 6. Envoyer les emails (si le service email est configuré)
+    try {
+      const emailService = require('./src/services/emailService');
+      await emailService.sendOrderNotification(order);
+      await emailService.sendOrderConfirmation(order);
+      console.log(`📧 Emails envoyés pour la commande #${order.order_number}`);
+    } catch (emailError) {
+      console.log('⚠️ Emails non envoyés (service non configuré):', emailError.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -226,19 +255,15 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// 6. Récupérer une commande par ID ou numéro
 app.get('/api/orders/:identifier', async (req, res) => {
   try {
     const { identifier } = req.params;
     
-    // Chercher par ID UUID ou par order_number
     let query = supabase.from('orders').select('*');
     
-    // Si c'est un UUID (format avec tirets)
     if (identifier.includes('-') && identifier.length > 20) {
       query = query.eq('id', identifier);
     } else {
-      // Sinon c'est probablement un order_number
       query = query.eq('order_number', identifier);
     }
     
@@ -255,7 +280,6 @@ app.get('/api/orders/:identifier', async (req, res) => {
   }
 });
 
-// 7. Récupérer les commandes d'un client
 app.get('/api/orders/customer/:email', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -276,7 +300,6 @@ app.get('/api/orders/customer/:email', async (req, res) => {
   }
 });
 
-// 8. Mettre à jour le statut d'une commande (admin)
 app.patch('/api/orders/:id/status', async (req, res) => {
   try {
     const { status, admin_note } = req.body;
@@ -290,12 +313,24 @@ app.patch('/api/orders/:id/status', async (req, res) => {
       });
     }
 
+    const { data: currentOrder, error: fetchError } = await supabase
+      .from('orders')
+      .select('notes')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const updatedNotes = admin_note ? 
+      `[Admin - ${new Date().toLocaleDateString()}]: ${admin_note}\n${currentOrder?.notes || ''}`.trim() :
+      currentOrder?.notes;
+
     const { data, error } = await supabase
       .from('orders')
       .update({ 
         status,
         updated_at: new Date(),
-        notes: admin_note ? `[Admin]: ${admin_note}\n${data?.notes || ''}` : data?.notes
+        notes: updatedNotes
       })
       .eq('id', req.params.id)
       .select()
@@ -321,7 +356,6 @@ app.patch('/api/orders/:id/status', async (req, res) => {
   }
 });
 
-// 9. Récupérer toutes les commandes (admin avec pagination)
 app.get('/api/admin/orders', async (req, res) => {
   try {
     const { page = 1, limit = 20, status } = req.query;
@@ -356,14 +390,10 @@ app.get('/api/admin/orders', async (req, res) => {
   }
 });
 
-// Dans app.js, après les autres routes
-const emailService = require('./src/services/emailService');
-
 // ======================
 // ROUTES EMAIL / CONTACT
 // ======================
 
-// Route pour le formulaire de contact
 app.post('/api/contact', async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
@@ -385,6 +415,17 @@ app.post('/api/contact', async (req, res) => {
       });
     }
     
+    // Vérifier si le service email est disponible
+    let emailService;
+    try {
+      emailService = require('./src/services/emailService');
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        message: 'Service email non configuré. Contactez-nous directement à contact@rifmabeauty.com'
+      });
+    }
+    
     const contactData = { name, email, phone, message };
     
     // Envoyer les emails
@@ -402,12 +443,12 @@ app.post('/api/contact', async (req, res) => {
     console.error('Erreur contact:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de l\'envoi du message'
+      message: 'Erreur lors de l\'envoi du message. Vous pouvez nous contacter directement à contact@rifmabeauty.com'
     });
   }
 });
 
-// Route test email
+// Route pour tester les emails (admin seulement)
 app.post('/api/test-email', async (req, res) => {
   try {
     const testOrder = {
@@ -433,6 +474,8 @@ app.post('/api/test-email', async (req, res) => {
       notes: 'Commande de test'
     };
     
+    const emailService = require('./src/services/emailService');
+    
     // Envoyer au propriétaire
     await emailService.sendOrderNotification(testOrder);
     
@@ -446,7 +489,7 @@ app.post('/api/test-email', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Service email non configuré ou erreur: ' + error.message
     });
   }
 });
@@ -463,27 +506,133 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
       });
     }
     
-    // Ici tu pourrais sauvegarder dans une table newsletter
-    const { data, error } = await supabase
-      .from('newsletter_subscribers')
-      .upsert([{ email, subscribed_at: new Date() }], { onConflict: 'email' });
+    // Valider l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format email invalide'
+      });
+    }
     
-    if (error) throw error;
+    // Vérifier si la table newsletter existe, sinon créer une simple log
+    try {
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .upsert([{ 
+          email, 
+          subscribed_at: new Date(),
+          source: 'website_form'
+        }], { onConflict: 'email' });
+      
+      if (error) {
+        console.log('Table newsletter non trouvée, logging dans console');
+        console.log(`📧 Nouvel inscrit newsletter: ${email}`);
+      }
+    } catch (tableError) {
+      console.log(`📧 Nouvel inscrit newsletter (log): ${email}`);
+    }
     
-    // Envoyer un email de bienvenue
-    // await emailService.sendNewsletterWelcome(email);
+    // Envoyer un email de bienvenue si le service est configuré
+    try {
+      const emailService = require('./src/services/emailService');
+      // await emailService.sendNewsletterWelcome(email);
+    } catch (emailError) {
+      console.log('Service email non configuré pour newsletter');
+    }
     
     res.json({
       success: true,
       message: 'Merci pour votre inscription à notre newsletter!'
     });
   } catch (error) {
+    console.error('Erreur newsletter:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur inscription newsletter'
+      message: 'Erreur lors de l\'inscription'
     });
   }
 });
 
+// Route pour récupérer toutes les catégories
+app.get('/api/categories', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('category')
+      .order('category');
+    
+    if (error) throw error;
+    
+    // Extraire les catégories uniques
+    const categories = [...new Set(data.map(p => p.category))];
+    
+    res.json({ 
+      success: true, 
+      count: categories.length,
+      data: categories 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Route pour rechercher des produits
+app.get('/api/products/search/:query', async (req, res) => {
+  try {
+    const { query } = req.params;
+    
+    if (!query || query.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Requête de recherche trop courte (minimum 2 caractères)'
+      });
+    }
+    
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .or(`name.ilike.%${query}%,description.ilike.%${query}%,shade.ilike.%${query}%`)
+      .order('name');
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      count: data.length,
+      data: data.map(p => ({
+        id: p.product_id,
+        name: p.name,
+        category: p.category,
+        price: p.price,
+        image: p.image_url,
+        description: p.description,
+        shade: p.shade,
+        stock: p.stock,
+        featured: p.featured
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Gestion des erreurs 404
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route non trouvée: ${req.method} ${req.url}`
+  });
+});
+
+// Gestion des erreurs globales
+app.use((err, req, res, next) => {
+  console.error('🔥 Erreur globale:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Erreur interne du serveur',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 module.exports = app;

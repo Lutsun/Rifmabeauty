@@ -15,7 +15,7 @@ export default function Home({ onNavigate }: HomeProps) {
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: 'url(public/assets/images/RBHome.JPG)',
+          backgroundImage: 'url(/assets/images/RBHome.JPG)',
           backgroundPosition: 'center 15%', // Ajuste le cadrage vertical pour centrer les lèvres
         }}
       >

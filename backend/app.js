@@ -394,9 +394,12 @@ app.get('/api/admin/orders', async (req, res) => {
 // ROUTES EMAIL / CONTACT
 // ======================
 
+// Dans app.js, modifiez la route /api/contact
 app.post('/api/contact', async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
+    
+    console.log('📩 API Contact appelée avec:', { name, email });
     
     // Validation
     if (!name || !email || !message) {
@@ -420,30 +423,48 @@ app.post('/api/contact', async (req, res) => {
     try {
       emailService = require('./src/services/emailService');
     } catch (err) {
+      console.error('❌ Service email non trouvé:', err.message);
       return res.status(500).json({
         success: false,
-        message: 'Service email non configuré. Contactez-nous directement à contact@rifmabeauty.com'
+        message: 'Service email non configuré'
       });
     }
     
     const contactData = { name, email, phone, message };
     
+    console.log('📤 Tentative d\'envoi des emails...');
+    
     // Envoyer les emails
     const result = await emailService.sendContactMessage(contactData);
     
-    if (result.success) {
+    console.log('📩 Résultat sendContactMessage:', result);
+    
+    // CORRECTION ICI : Vérifiez correctement le résultat
+    if (result && result.success === true) {
       res.json({
         success: true,
         message: 'Message envoyé avec succès! Nous vous répondrons rapidement.'
       });
     } else {
-      throw new Error(result.error || 'Erreur envoi email');
+      // Si result.error existe, l'inclure dans le message
+      const errorMsg = result && result.error 
+        ? `Erreur: ${result.error}`
+        : 'Erreur lors de l\'envoi du message';
+      
+      console.error('❌ Erreur dans sendContactMessage:', errorMsg);
+      res.status(500).json({
+        success: false,
+        message: errorMsg
+      });
     }
+    
   } catch (error) {
-    console.error('Erreur contact:', error);
+    console.error('🔥 Erreur dans /api/contact:', error);
+    console.error('Stack:', error.stack);
+    
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de l\'envoi du message. Vous pouvez nous contacter directement à contact@rifmabeauty.com'
+      message: 'Erreur serveur: ' + (error.message || 'Erreur inconnue')
     });
   }
 });
@@ -495,9 +516,12 @@ app.post('/api/test-email', async (req, res) => {
 });
 
 // Route pour la newsletter
+// Route pour la newsletter
 app.post('/api/newsletter/subscribe', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, name } = req.body;
+    
+    console.log('📧 Newsletter subscription attempt:', { email, name });
     
     if (!email) {
       return res.status(400).json({
@@ -515,41 +539,80 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
       });
     }
     
-    // Vérifier si la table newsletter existe, sinon créer une simple log
+    // 1. Sauvegarder dans Supabase
+    let dbResult = null;
+    let dbError = null;
+    
     try {
       const { data, error } = await supabase
         .from('newsletter_subscribers')
         .upsert([{ 
           email, 
+          name: name || null,
           subscribed_at: new Date(),
-          source: 'website_form'
-        }], { onConflict: 'email' });
+          source: 'website_form',
+          active: true
+        }], { 
+          onConflict: 'email',
+          ignoreDuplicates: false 
+        })
+        .select();
       
       if (error) {
-        console.log('Table newsletter non trouvée, logging dans console');
-        console.log(`📧 Nouvel inscrit newsletter: ${email}`);
+        dbError = error;
+        console.error('❌ Erreur Supabase newsletter:', error.message);
+        
+        // Si la table n'existe pas, la créer automatiquement
+        if (error.message.includes('relation "newsletter_subscribers" does not exist')) {
+          console.log('⚠️ Table newsletter_subscribers non trouvée');
+          // Vous pourriez créer la table ici avec une requête SQL directe
+        }
+      } else {
+        dbResult = data;
+        console.log('✅ Inscription sauvegardée dans Supabase:', email);
       }
-    } catch (tableError) {
-      console.log(`📧 Nouvel inscrit newsletter (log): ${email}`);
+    } catch (dbError) {
+      console.log('ℹ️ Erreur base de données:', dbError.message);
     }
     
-    // Envoyer un email de bienvenue si le service est configuré
+    // 2. Envoyer un email de confirmation (simulé si Brevo non configuré)
+    let emailResult = null;
     try {
       const emailService = require('./src/services/emailService');
-      // await emailService.sendNewsletterWelcome(email);
+      emailResult = await emailService.sendNewsletterConfirmation(email, name);
+      
+      if (emailResult && emailResult.success) {
+        console.log('📧 Email de confirmation newsletter:', emailResult.simulated ? 'SIMULÉ' : 'ENVOYÉ');
+      } else {
+        console.log('ℹ️ Email de confirmation non envoyé');
+      }
     } catch (emailError) {
-      console.log('Service email non configuré pour newsletter');
+      console.log('ℹ️ Erreur email de confirmation:', emailError.message);
     }
     
+    // 3. Log dans la console
+    console.log(`🎉 Nouvel inscrit newsletter: ${email} ${name ? '(' + name + ')' : ''}`);
+    
+    // Toujours retourner un succès même si l'email échoue
     res.json({
       success: true,
-      message: 'Merci pour votre inscription à notre newsletter!'
+      message: 'Merci pour votre inscription à notre newsletter!',
+      data: {
+        email,
+        name: name || null,
+        subscribed: true,
+        savedToDb: !!dbResult,
+        emailSent: emailResult ? emailResult.success : false,
+        emailSimulated: emailResult ? emailResult.simulated : true,
+        timestamp: new Date().toISOString()
+      }
     });
+    
   } catch (error) {
-    console.error('Erreur newsletter:', error);
+    console.error('🔥 Erreur newsletter:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de l\'inscription'
+      message: 'Erreur lors de l\'inscription. Réessayez plus tard.'
     });
   }
 });

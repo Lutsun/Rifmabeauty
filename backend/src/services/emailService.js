@@ -12,7 +12,7 @@ class EmailService {
     
     switch(serviceType) {
       case 'resend':
-        return require('./resendService');
+        return require('./brevoService');
       case 'brevo':
         return require('./brevoService');
       default:
@@ -68,13 +68,19 @@ class EmailService {
   }
 
   // Envoyer un message de contact
-  async sendContactMessage(contactData) {
+    async sendContactMessage(contactData) {
+  try {
+    const { name, email, phone, message } = contactData;
+    
+    console.log('📩 DEBUT sendContactMessage ===========');
+    
+    let allSuccess = true;
+    let errors = [];
+    
+    // 1. Email au propriétaire
     try {
-      const { name, email, phone, message } = contactData;
-      
-      // 1. Email au propriétaire
       const ownerHtml = this.generateContactEmailHTML(contactData, 'owner');
-      await this.service.sendEmail({
+      const ownerResult = await this.service.sendEmail({
         to: process.env.OWNER_EMAIL || 'sergedasylva0411@gmail.com',
         subject: `📩 Nouveau message de ${name}`,
         html: ownerHtml,
@@ -82,9 +88,22 @@ class EmailService {
         replyTo: email
       });
       
-      // 2. Accusé de réception au client
+      if (!ownerResult.success) {
+        allSuccess = false;
+        errors.push(`Propriétaire: ${ownerResult.error}`);
+      }
+      console.log('📧 Email propriétaire:', ownerResult.success ? 'OK' : 'ÉCHEC');
+      
+    } catch (ownerError) {
+      allSuccess = false;
+      errors.push(`Propriétaire: ${ownerError.message}`);
+      console.error('❌ Erreur email propriétaire:', ownerError.message);
+    }
+    
+    // 2. Accusé de réception au client
+    try {
       const clientHtml = this.generateContactEmailHTML(contactData, 'client');
-      await this.service.sendEmail({
+      const clientResult = await this.service.sendEmail({
         to: email,
         subject: `✅ Message reçu - RIFMA Beauty`,
         html: clientHtml,
@@ -92,14 +111,43 @@ class EmailService {
         replyTo: process.env.OWNER_EMAIL
       });
       
-      console.log(`📧 Message contact traité pour: ${email}`);
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Erreur message contact:', error);
-      return { success: false, error: error.message };
+      if (!clientResult.success) {
+        allSuccess = false;
+        errors.push(`Client: ${clientResult.error}`);
+      }
+      console.log('📧 Email client:', clientResult.success ? 'OK' : 'ÉCHEC');
+      
+    } catch (clientError) {
+      allSuccess = false;
+      errors.push(`Client: ${clientError.message}`);
+      console.error('❌ Erreur email client:', clientError.message);
     }
+    
+    // Si au moins un email a été envoyé (email au propriétaire), considérer comme succès
+    const ownerEmailSent = !errors.some(e => e.includes('Propriétaire'));
+    
+    if (ownerEmailSent) {
+      console.log('✅ sendContactMessage - Succès partiel (propriétaire notifié)');
+      return { 
+        success: true, 
+        warning: errors.length > 0 ? `Email client non envoyé: ${errors.join(', ')}` : undefined
+      };
+    } else {
+      console.log('❌ sendContactMessage - Échec complet');
+      return { 
+        success: false, 
+        error: `Aucun email envoyé: ${errors.join(', ')}` 
+      };
+    }
+    
+  } catch (error) {
+    console.error('❌ ERREUR inattendue dans sendContactMessage:', error.message);
+    return { 
+      success: false, 
+      error: error.message 
+    };
   }
-
+}
   // Générer le HTML pour le propriétaire
   generateOrderEmailHTML(order) {
     const itemsHTML = order.items.map(item => `
@@ -361,6 +409,109 @@ Merci pour votre confiance !
 L'équipe RIFMA Beauty
     `.trim();
   }
+
+  // Envoyer une confirmation de newsletter
+async sendNewsletterConfirmation(email, name = null) {
+  try {
+    const html = this.generateNewsletterEmailHTML(email, name);
+    const text = this.generateNewsletterEmailText(email, name);
+    
+    const result = await this.service.sendEmail({
+      to: email,
+      subject: `🎉 Bienvenue dans la newsletter RIFMA Beauty!`,
+      html,
+      text,
+      replyTo: process.env.OWNER_EMAIL
+    });
+    
+    console.log(`📧 Confirmation newsletter envoyée à: ${email}`);
+    return result;
+  } catch (error) {
+    console.error('❌ Erreur confirmation newsletter:', error.message);
+    // Ne JAMAIS bloquer l'inscription si l'email échoue
+    return { 
+      success: true,  // Toujours retourner success
+      simulated: true,
+      error: error.message,
+      message: 'Inscription enregistrée, email simulé'
+    };
+  }
 }
+
+// Générer le HTML pour la newsletter
+generateNewsletterEmailHTML(email, name) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; }
+        .header { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .welcome-box { background: #f8f9fa; border-radius: 10px; padding: 25px; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+        .highlight { color: #e91e63; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; font-weight: 300;">🎉 BIENVENUE !</h1>
+        </div>
+        
+        <div class="content">
+          <div class="welcome-box">
+            <h2 style="color: #e91e63;">Bonjour ${firstName} !</h2>
+            <p>Merci de vous être inscrit(e) à la newsletter <span class="highlight">RIFMA Beauty</span>.</p>
+            
+            <p>Vous recevrez :</p>
+            <ul>
+              <li>Nos dernières nouveautés produits</li>
+              <li>Conseils beauté et tutoriels</li>
+              <li>Offres exclusives</li>
+            </ul>
+            
+            <p><strong>Votre email :</strong> ${email}</p>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>RIFMA Beauty - Votre beauté, notre passion 💄</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// Générer le texte pour la newsletter
+generateNewsletterEmailText(email, name) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  
+  return `
+BIENVENUE À LA NEWSLETTER RIFMA BEAUTY
+
+Bonjour ${firstName},
+
+Merci de vous être inscrit(e) à notre newsletter !
+
+Vous recevrez :
+- Nos dernières nouveautés produits
+- Conseils beauté et tutoriels  
+- Offres exclusives et promotions
+
+Votre email : ${email}
+
+Merci pour votre confiance !
+L'équipe RIFMA Beauty
+  `.trim();
+}
+
+}
+
 
 module.exports = new EmailService();

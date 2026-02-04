@@ -13,42 +13,46 @@ export default function Contact() {
   const [newsletterEmail, setNewsletterEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus(null);
+  e.preventDefault();
+  setIsSubmitting(true);
+  setSubmitStatus(null);
 
-    try {
-      const response = await fetch('http://localhost:5000/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+  try {
+    const response = await fetch('http://localhost:5000/api/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    console.log('📡 Réponse HTTP:', response.status, response.statusText);
+    
+    const data = await response.json();
+    console.log('📡 Données reçues:', data);
+
+    if (data.success) {
+      setSubmitStatus({ 
+        type: 'success', 
+        message: 'Message envoyé avec succès! Nous vous répondrons rapidement.' 
       });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSubmitStatus({ 
-          type: 'success', 
-          message: 'Message envoyé avec succès! Nous vous répondrons rapidement.' 
-        });
-        setFormData({ name: '', email: '', phone: '', message: '' });
-      } else {
-        setSubmitStatus({ 
-          type: 'error', 
-          message: data.message || 'Erreur lors de l\'envoi du message' 
-        });
-      }
-    } catch (error) {
+      setFormData({ name: '', email: '', phone: '', message: '' });
+    } else {
       setSubmitStatus({ 
         type: 'error', 
-        message: 'Erreur de connexion au serveur. Vérifiez que le serveur backend est démarré.' 
+        message: data.message || 'Erreur lors de l\'envoi du message' 
       });
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  } catch (error) {
+    console.error('🔥 Erreur fetch:', error);
+    setSubmitStatus({ 
+      type: 'error', 
+      message: 'Erreur de connexion au serveur. Vérifiez que le serveur backend est démarré.' 
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

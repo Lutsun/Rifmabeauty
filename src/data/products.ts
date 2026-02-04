@@ -117,7 +117,7 @@ export const products: Product[] = [
     name: 'Satin Luxe Lipstick',
     category: 'Lip liners',
     price: 3000,
-    image: '/public/assets/images/rougealevre1.jpg',
+    image: '/assets/images/rougealevre1.jpg',
     description: 'Rouge à lèvres satin lumineux offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
     shade: 'Coral Bliss'
   },
@@ -126,7 +126,7 @@ export const products: Product[] = [
     name: 'Brown Lipstick',
     category: 'Lip liners',
     price: 3000,
-    image: '/public/assets/images/rougealevre2.jpg',
+    image: '/assets/images/rougealevre2.jpg',
     description: 'Rouge à lèvres marron offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
     shade: 'Caramel Brown'
   }

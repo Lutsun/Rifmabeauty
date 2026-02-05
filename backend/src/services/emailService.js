@@ -493,7 +493,7 @@ generateNewsletterEmailText(email, name) {
   const firstName = name ? name.split(' ')[0] : 'cher client';
   
   return `
-BIENVENUE À LA NEWSLETTER RIFMA BEAUTY
+BIENVENUE À LA NEWSLETTER RIFMA BEAUTY COSMETICS
 
 Bonjour ${firstName},
 

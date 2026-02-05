@@ -1,5 +1,6 @@
 import { ShoppingBag, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import CartIcon from '../components/CartIcon';
 
 
 interface HeaderProps {
@@ -55,12 +56,7 @@ export default function Header({ currentPage, onNavigate }: HeaderProps) {
           </nav>
 
           <div className="flex items-center space-x-6">
-            <button className="text-white/80 hover:text-white transition-colors relative">
-              <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-2 -right-2 bg-rose-400 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                0
-              </span>
-            </button>
+            <CartIcon />
 
             <button
               className="md:hidden text-white"

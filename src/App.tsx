@@ -6,8 +6,11 @@ import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import CheckoutPage from './pages/CheckoutPage'; 
+import CartDrawer from './components/CartDrawer'; // À créer
+import { CartProvider } from './components/CartContext'; // À créer
 
-type Page = 'home' | 'shop' | 'product' | 'about' | 'contact';
+type Page = 'home' | 'shop' | 'product' | 'about' | 'contact' | 'checkout';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -58,25 +61,31 @@ function App() {
         return <About />;
       case 'contact':
         return <Contact />;
+      case 'checkout':
+        return <CheckoutPage onNavigate={handleNavigate} />; 
       default:
         return <Home onNavigate={handleNavigate} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header currentPage={currentPage} onNavigate={handleNavigate} />
+    <CartProvider>
+      <div className="min-h-screen bg-white">
+        <Header currentPage={currentPage} onNavigate={handleNavigate} />
+        
+        <CartDrawer onNavigate={handleNavigate} /> {/* Panier latéral */}
+        
+        <main
+          className={`transition-opacity duration-300 ${
+            isPageTransitioning ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          {renderPage()}
+        </main>
 
-      <main
-        className={`transition-opacity duration-300 ${
-          isPageTransitioning ? 'opacity-0' : 'opacity-100'
-        }`}
-      >
-        {renderPage()}
-      </main>
-
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </CartProvider>
   );
 }
 

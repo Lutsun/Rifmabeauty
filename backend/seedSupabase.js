@@ -127,9 +127,9 @@ const productsData = [
   },
   {
     product_id: '13',
-    name: 'Satin Luxe Lipstick',
+    name: 'Purple me',
     category: 'Lip liners',
-    price: 4500,
+    price: 3000,
     image_url: '/public/assets/images/rougealevre1.jpg',
     description: 'Rouge à lèvres satin lumineux offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
     shade: 'Coral Bliss',
@@ -137,12 +137,23 @@ const productsData = [
   },
   {
     product_id: '14',
-    name: 'Brown Lipstick',
+    name: 'Dark Brown',
     category: 'Lip liners',
-    price: 4500,
+    price: 3000,
     image_url: '/public/assets/images/rougealevre2.jpg',
     description: 'Rouge à lèvres marron offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
     shade: 'Caramel Brown',
+    stock: 10
+  },
+
+  {
+    product_id: '15',
+    name: 'Red ish',
+    category: 'Lip liners',
+    price: 3000,
+    image_url: 'public/assets/images/rougealevre3.jpg',
+    description: 'Rouge à lèvres rouge intense offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
+    shade: 'Fiery Red',
     stock: 10
   }
 ];

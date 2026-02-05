@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const supabase = require('./src/config/supabase');
+const { supabase } = require('./src/config/supabase');
 
 const app = express();
 
 // Configuration CORS détaillée
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:3000'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -63,9 +63,34 @@ app.get('/api/health', (req, res) => {
 
 // API Products
 app.get('/api/products', async (req, res) => {
+  console.log('📦 API Products appelée avec query:', req.query);
   try {
     const { category, featured } = req.query;
     
+    console.log('🔍 Exécution de la requête Supabase...');
+    console.log('Table products existe?');
+    
+    // Test simple d'abord
+    const { data: testData, error: testError } = await supabase
+      .from('products')
+      .select('*')
+      .limit(1);
+    
+    if (testError) {
+      console.error('❌ ERREUR Supabase (test):', testError);
+      console.error('Message:', testError.message);
+      console.error('Details:', testError.details);
+      console.error('Hint:', testError.hint);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erreur Supabase: ' + testError.message,
+        error: testError 
+      });
+    }
+    
+    console.log('✅ Test réussi, données:', testData);
+    
+    // Maintenant la vraie requête
     let query = supabase.from('products').select('*');
     
     if (category && category !== 'all') {
@@ -76,9 +101,19 @@ app.get('/api/products', async (req, res) => {
       query = query.eq('featured', true);
     }
     
+    console.log('🔍 Exécution de la requête finale...');
     const { data, error } = await query;
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ ERREUR Supabase (finale):', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erreur Supabase: ' + error.message,
+        error: error 
+      });
+    }
+    
+    console.log(`✅ ${data.length} produits récupérés`);
     
     res.json({
       success: true,
@@ -97,7 +132,13 @@ app.get('/api/products', async (req, res) => {
       }))
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('🔥 ERREUR serveur non gérée:', error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur serveur: ' + error.message,
+      stack: error.stack 
+    });
   }
 });
 
@@ -536,7 +577,7 @@ app.post('/api/test-email', async (req, res) => {
 });
 
 // Route pour la newsletter
-// Route pour la newsletter
+// Route pour la newsletter - VERSION CORRIGÉE
 app.post('/api/newsletter/subscribe', async (req, res) => {
   try {
     const { email, name } = req.body;
@@ -559,20 +600,55 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
       });
     }
     
-    // 1. Sauvegarder dans Supabase
+    // 1. VÉRIFIER D'ABORD si l'email existe déjà (approche plus robuste)
+    let emailExists = false;
+    try {
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .select('email, active')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('❌ Erreur vérification email:', error.message);
+      } else if (data) {
+        emailExists = true;
+        console.log(`ℹ️ Email ${email} existe déjà dans la base`);
+        
+        // Si l'email existe déjà et est actif, retourner un message
+        if (data.active) {
+          return res.json({
+            success: true,
+            alreadySubscribed: true,
+            message: 'Cet email est déjà inscrit à notre newsletter!'
+          });
+        } else {
+          // Si l'email existe mais n'est pas actif, le réactiver
+          console.log(`🔄 Réactivation de l'email ${email}`);
+        }
+      }
+    } catch (dbError) {
+      console.log('ℹ️ Erreur base de données:', dbError.message);
+    }
+    
+    // 2. Insérer ou mettre à jour l'abonné
     let dbResult = null;
     let dbError = null;
     
     try {
+      const subscriberData = { 
+        email, 
+        name: name || null,
+        subscribed_at: new Date(),
+        source: 'website_form',
+        active: true,
+        updated_at: new Date()
+      };
+      
+      // Utiliser upsert avec onConflict pour gérer les doublons proprement
       const { data, error } = await supabase
         .from('newsletter_subscribers')
-        .upsert([{ 
-          email, 
-          name: name || null,
-          subscribed_at: new Date(),
-          source: 'website_form',
-          active: true
-        }], { 
+        .upsert(subscriberData, { 
           onConflict: 'email',
           ignoreDuplicates: false 
         })
@@ -580,53 +656,76 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
       
       if (error) {
         dbError = error;
-        console.error('❌ Erreur Supabase newsletter:', error.message);
+        console.error('❌ Erreur Supabase upsert:', error.message);
         
-        // Si la table n'existe pas, la créer automatiquement
+        // Si la table n'existe pas, donner des instructions
         if (error.message.includes('relation "newsletter_subscribers" does not exist')) {
           console.log('⚠️ Table newsletter_subscribers non trouvée');
-          // Vous pourriez créer la table ici avec une requête SQL directe
+          return res.status(500).json({
+            success: false,
+            message: 'La table newsletter n\'est pas configurée. Contactez l\'administrateur.',
+            technical: error.message
+          });
+        }
+        
+        // Si c'est une erreur de contrainte unique (doublon)
+        if (error.message.includes('duplicate key value')) {
+          return res.json({
+            success: true,
+            alreadySubscribed: true,
+            message: 'Cet email est déjà inscrit à notre newsletter!'
+          });
         }
       } else {
         dbResult = data;
-        console.log('✅ Inscription sauvegardée dans Supabase:', email);
+        console.log(`✅ Inscription sauvegardée dans Supabase: ${email}`);
       }
     } catch (dbError) {
-      console.log('ℹ️ Erreur base de données:', dbError.message);
+      console.log('ℹ️ Erreur base de données upsert:', dbError.message);
     }
     
-    // 2. Envoyer un email de confirmation (simulé si Brevo non configuré)
+    // 3. Envoyer un email de confirmation (seulement si nouvel inscrit)
     let emailResult = null;
-    try {
-      const emailService = require('./src/services/emailService');
-      emailResult = await emailService.sendNewsletterConfirmation(email, name);
-      
-      if (emailResult && emailResult.success) {
-        console.log('📧 Email de confirmation newsletter:', emailResult.simulated ? 'SIMULÉ' : 'ENVOYÉ');
-      } else {
-        console.log('ℹ️ Email de confirmation non envoyé');
+    if (!emailExists) {
+      try {
+        const emailService = require('./src/services/emailService');
+        emailResult = await emailService.sendNewsletterConfirmation(email, name);
+        
+        if (emailResult && emailResult.success) {
+          console.log('📧 Email de confirmation newsletter:', emailResult.simulated ? 'SIMULÉ' : 'ENVOYÉ');
+        } else {
+          console.log('ℹ️ Email de confirmation non envoyé');
+        }
+      } catch (emailError) {
+        console.log('ℹ️ Erreur email de confirmation:', emailError.message);
       }
-    } catch (emailError) {
-      console.log('ℹ️ Erreur email de confirmation:', emailError.message);
     }
     
-    // 3. Log dans la console
-    console.log(`🎉 Nouvel inscrit newsletter: ${email} ${name ? '(' + name + ')' : ''}`);
+    // 4. Log dans la console
+    console.log(`🎉 ${emailExists ? 'Email déjà inscrit' : 'Nouvel inscrit'}: ${email} ${name ? '(' + name + ')' : ''}`);
     
-    // Toujours retourner un succès même si l'email échoue
-    res.json({
-      success: true,
-      message: 'Merci pour votre inscription à notre newsletter!',
-      data: {
-        email,
-        name: name || null,
-        subscribed: true,
-        savedToDb: !!dbResult,
-        emailSent: emailResult ? emailResult.success : false,
-        emailSimulated: emailResult ? emailResult.simulated : true,
-        timestamp: new Date().toISOString()
-      }
-    });
+    // Retourner la réponse
+    if (emailExists) {
+      res.json({
+        success: true,
+        alreadySubscribed: true,
+        message: 'Cet email est déjà inscrit à notre newsletter!'
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'Merci pour votre inscription à notre newsletter!',
+        data: {
+          email,
+          name: name || null,
+          subscribed: true,
+          savedToDb: !!dbResult,
+          emailSent: emailResult ? emailResult.success : false,
+          emailSimulated: emailResult ? emailResult.simulated : true,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
     
   } catch (error) {
     console.error('🔥 Erreur newsletter:', error);
@@ -636,6 +735,64 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
     });
   }
 });
+
+// Route pour vérifier si un email existe déjà
+app.post('/api/newsletter/check', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email requis'
+      });
+    }
+    
+    // Valider l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format email invalide'
+      });
+    }
+    
+    // Vérifier dans la base de données
+    let exists = false;
+    
+    try {
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .select('email')
+        .eq('email', email)
+        .eq('active', true)
+        .maybeSingle(); // maybeSingle retourne null si aucun résultat
+      
+      if (error) {
+        console.error('Erreur Supabase check:', error.message);
+      } else {
+        exists = !!data; // true si data existe, false sinon
+      }
+    } catch (dbError) {
+      console.log('ℹ️ Erreur base de données check:', dbError.message);
+    }
+    
+    res.json({
+      success: true,
+      exists,
+      message: exists ? 'Email déjà inscrit' : 'Email disponible'
+    });
+    
+  } catch (error) {
+    console.error('🔥 Erreur newsletter check:', error);
+    res.status(500).json({
+      success: false,
+      exists: false,
+      message: 'Erreur lors de la vérification'
+    });
+  }
+});
+
 
 // Route pour récupérer toutes les catégories
 app.get('/api/categories', async (req, res) => {

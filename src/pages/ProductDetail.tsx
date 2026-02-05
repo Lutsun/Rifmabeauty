@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ShoppingBag, Heart } from 'lucide-react';
-import { products } from '../data/products';
+import { apiService, Product } from '../services/apiService'; 
+import { useCart } from '../components/CartContext';
 
 interface ProductDetailProps {
   productId: string;
@@ -7,13 +9,57 @@ interface ProductDetailProps {
 }
 
 export default function ProductDetail({ productId, onNavigate }: ProductDetailProps) {
-  const product = products.find((p) => p.id === productId);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { addToCart } = useCart();
 
-  if (!product) {
+  useEffect(() => {
+    fetchProduct();
+  }, [productId]);
+
+  const fetchProduct = async () => {
+    setLoading(true);
+    try {
+      const prod = await apiService.getProductById(productId);
+      setProduct(prod);
+      setError(null);
+      
+      // Récupérer les produits similaires
+      if (prod) {
+        const allProducts = await apiService.getAllProducts();
+        const filteredRelated = allProducts
+          .filter(p => p.id !== productId && p.category === prod.category)
+          .slice(0, 4);
+        setRelatedProducts(filteredRelated);
+      } else {
+        setError('Produit non trouvé');
+      }
+    } catch (err) {
+      console.error('Error fetching product:', err);
+      setError('Impossible de charger le produit');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement du produit...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <p className="text-gray-600">Produit non trouvé</p>
+          <p className="text-gray-600">{error || 'Produit non trouvé'}</p>
           <button
             onClick={() => onNavigate('shop')}
             className="text-rose-600 hover:text-rose-700 underline"
@@ -43,6 +89,9 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
                 src={product.image}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = '/assets/images/placeholder.jpg';
+                }}
               />
             </div>
           </div>
@@ -73,12 +122,16 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
             </div>
 
             <div className="space-y-4 pt-4">
-              <button className="w-full bg-black text-white py-4 px-8 hover:bg-gray-900 transition-all duration-300 flex items-center justify-center space-x-3 group">
-                <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-light tracking-widest uppercase">
-                  Ajouter au panier
-                </span>
-              </button>
+              <button 
+              onClick={() => addToCart(product)}
+              className="w-full bg-black text-white py-4 px-8 hover:bg-gray-900 transition-all duration-300 flex items-center justify-center space-x-3 group"
+              disabled={!product.inStock}
+            >
+              <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-light tracking-widest uppercase">
+                {product.inStock ? 'Ajouter au panier' : 'Rupture de stock'}
+              </span>
+            </button>
 
               <button className="w-full border-2 border-gray-300 text-gray-700 py-4 px-8 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center space-x-3 group">
                 <Heart className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -110,15 +163,13 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
           </div>
         </div>
 
-        <section className="mt-24">
-          <h2 className="text-3xl font-light tracking-wide text-gray-900 mb-12 text-center">
-            Produits Similaires
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products
-              .filter((p) => p.id !== productId && p.category === product.category)
-              .slice(0, 4)
-              .map((relatedProduct) => (
+        {relatedProducts.length > 0 && (
+          <section className="mt-24">
+            <h2 className="text-3xl font-light tracking-wide text-gray-900 mb-12 text-center">
+              Produits Similaires
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {relatedProducts.map((relatedProduct) => (
                 <div
                   key={relatedProduct.id}
                   className="cursor-pointer group"
@@ -129,6 +180,9 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
                       src={relatedProduct.image}
                       alt={relatedProduct.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      onError={(e) => {
+                        e.currentTarget.src = '/assets/images/placeholder.jpg';
+                      }}
                     />
                   </div>
                   <div className="space-y-2">
@@ -136,13 +190,14 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
                       {relatedProduct.name}
                     </h3>
                     <p className="text-lg font-light text-gray-900">
-                      {relatedProduct.price} €
+                      {relatedProduct.price} FCFA
                     </p>
                   </div>
                 </div>
               ))}
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

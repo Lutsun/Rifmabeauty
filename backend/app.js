@@ -4,8 +4,28 @@ const supabase = require('./src/config/supabase');
 
 const app = express();
 
-app.use(cors());
+// Configuration CORS détaillée
+const corsOptions = {
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+// Appliquer CORS avant toutes les routes
+app.use(cors(corsOptions));
+
+// Middleware pour logger les requêtes CORS (utile pour le débogage)
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  next();
+});
+
 app.use(express.json());
+
+// Gérer spécifiquement les pré-vols OPTIONS
+app.options('*', cors(corsOptions));
 
 // Route de base pour vérifier que l'API fonctionne
 app.get('/', (req, res) => {

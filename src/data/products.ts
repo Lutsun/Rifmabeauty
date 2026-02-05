@@ -114,20 +114,31 @@ export const products: Product[] = [
   },
   {
     id: '13',
-    name: 'Satin Luxe Lipstick',
+    name: 'Purple me',
     category: 'Lip liners',
     price: 3000,
-    image: '/assets/images/rougealevre1.jpg',
+    image: 'public/assets/images/rougealevre1.jpg',
     description: 'Rouge à lèvres satin lumineux offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
     shade: 'Coral Bliss'
   },
   {
     id: '14',
-    name: 'Brown Lipstick',
+    name: 'Dark brown',
     category: 'Lip liners',
     price: 3000,
-    image: '/assets/images/rougealevre2.jpg',
+    image: 'public/assets/images/rougealevre2.jpg',
     description: 'Rouge à lèvres marron offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
     shade: 'Caramel Brown'
+  },
+  {
+    id: '15',
+    name: 'Red ish',
+    category: 'Lip liners',
+    price: 3000,
+    image: 'public/assets/images/rougealevre3.jpg',
+    description: 'Rouge à lèvres rouge intense offrant le parfait équilibre entre couleur vibrante et confort hydratant.',
+    shade: 'Fiery Red'
   }
+
+
 ];

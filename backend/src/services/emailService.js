@@ -8,11 +8,11 @@ class EmailService {
   }
 
   createService() {
-    const serviceType = process.env.EMAIL_SERVICE || 'resend';
+    const serviceType = process.env.EMAIL_SERVICE || 'brevo';
     
     switch(serviceType) {
       case 'resend':
-        return require('./brevoService');
+        return require('./resendService');
       case 'brevo':
         return require('./brevoService');
       default:

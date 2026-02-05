@@ -497,8 +497,12 @@ BIENVENUE À LA NEWSLETTER RIFMA BEAUTY COSMETICS
 
 Bonjour ${firstName},
 
-On vous a deja dit que vous etiez belle aujourd'hui ? Non ?
-Alors on le fait maintenant : vous êtes magnifique ! 
+Merci de vous être inscrit(e) à notre newsletter !
+
+Vous recevrez :
+- Nos dernières nouveautés produits
+- Conseils beauté et tutoriels  
+- Offres exclusives et promotions
 
 Votre email : ${email}
 

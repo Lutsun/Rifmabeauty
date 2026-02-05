@@ -97,9 +97,10 @@ app.get('/api/products', async (req, res) => {
       query = query.eq('category', category);
     }
     
-    if (featured === 'true') {
-      query = query.eq('featured', true);
-    }
+    if (featured !== undefined) {
+    const isFeatured = featured === 'true'
+    query = query.eq('featured', isFeatured)
+  }
     
     console.log('🔍 Exécution de la requête finale...');
     const { data, error } = await query;

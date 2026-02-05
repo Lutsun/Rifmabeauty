@@ -7,9 +7,9 @@ export default function About() {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: 'url(https://images.pexels.com/photos/2530775/pexels-photo-2530775.jpeg?auto=compress&cs=tinysrgb&w=1920)',
+            backgroundImage: 'url(https://ucliznuennmgiyjsxgrk.supabase.co/storage/v1/object/public/images/ourstory.JPG)',
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundPosition: 'center 50%',
           }}
         >
           {/* Dégradé pour améliorer la lisibilité */}

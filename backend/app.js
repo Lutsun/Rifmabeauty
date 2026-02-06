@@ -263,7 +263,17 @@ app.post('/api/orders', async (req, res) => {
     // 3. Générer un numéro de commande unique
     const order_number = 'RIFMA-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
-    // 4. Créer la commande
+    // 4. GÉRER LE CLIENT AUTOMATIQUEMENT
+    const customer = await manageCustomer(
+      customer_email,
+      customer_name,
+      customer_phone,
+      shipping_address
+    );
+    
+    console.log(`👤 Client ${customer ? 'géré' : 'non géré'}: ${customer_email}`);
+
+    // 5. Créer la commande
     const { data: order, error } = await supabase
       .from('orders')
       .insert([{
@@ -286,7 +296,7 @@ app.post('/api/orders', async (req, res) => {
 
     if (error) throw error;
 
-    // 5. Mettre à jour les stocks
+    // 6. Mettre à jour les stocks
     for (const item of items) {
       await supabase.rpc('decrement_stock', {
         product_id: item.productId,
@@ -294,7 +304,10 @@ app.post('/api/orders', async (req, res) => {
       });
     }
 
-    // 6. Envoyer les emails (si le service email est configuré)
+    // 7. METTRE À JOUR LES STATS DU CLIENT
+    await updateCustomerStats(customer_email, total_amount);
+
+    // 8. Envoyer les emails (si le service email est configuré)
     try {
       const emailService = require('./src/services/emailService');
       await emailService.sendOrderNotification(order);
@@ -315,7 +328,12 @@ app.post('/api/orders', async (req, res) => {
         payment_method: order.payment_method,
         payment_status: order.payment_status,
         created_at: order.created_at,
-        estimated_delivery: '2-3 jours ouvrables'
+        estimated_delivery: '2-3 jours ouvrables',
+        customer: {
+          email: customer_email,
+          has_customer_record: !!customer,
+          message: customer ? 'Vos informations ont été enregistrées pour vos prochaines commandes!' : 'Problème avec l\'enregistrement client'
+        }
       }
     });
   } catch (error) {
@@ -864,6 +882,537 @@ app.get('/api/products/search/:query', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// ======================
+// ROUTES CLIENTS
+// ======================
+
+// Route pour récupérer les infos d'un client par email
+app.get('/api/customers/:email', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('email', req.params.email)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') { // Pas trouvé
+        return res.status(404).json({
+          success: false,
+          message: 'Client non trouvé'
+        });
+      }
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Route pour récupérer les commandes d'un client avec ses infos
+app.get('/api/customers/:email/full-profile', async (req, res) => {
+  try {
+    // 1. Récupérer le client
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('email', req.params.email)
+      .single();
+
+    if (customerError && customerError.code !== 'PGRST116') {
+      throw customerError;
+    }
+
+    // 2. Récupérer ses commandes
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('customer_email', req.params.email)
+      .order('created_at', { ascending: false });
+
+    if (ordersError) throw ordersError;
+
+    res.json({
+      success: true,
+      data: {
+        customer: customer || null,
+        orders: orders || [],
+        order_count: orders?.length || 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ======================
+// ROUTES MARKETING / NOTIFICATIONS
+// ======================
+
+// Route pour notifier d'un nouveau produit (admin)
+app.post('/api/admin/notify-new-product', async (req, res) => {
+  try {
+    const { product_id, custom_message } = req.body;
+    
+    // Vérification basique (dans un vrai système, ajouter une authentification admin)
+    const adminToken = req.headers['x-admin-token'];
+    if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non autorisé'
+      });
+    }
+    
+    if (!product_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID produit requis'
+      });
+    }
+    
+    // Récupérer les infos du produit
+    const { data: product, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('product_id', product_id)
+      .single();
+    
+    if (error) throw error;
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Produit non trouvé'
+      });
+    }
+    
+    // Préparer les données du produit
+    const productData = {
+      id: product.product_id,
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      image: product.image_url,
+      description: product.description,
+      custom_message: custom_message || `Nouveau produit disponible : ${product.name}!`
+    };
+    
+    // Envoyer les notifications
+    const result = await sendProductNotificationToSubscribers(productData);
+    
+    res.json({
+      success: result.success,
+      message: result.message,
+      data: {
+        product: productData,
+        notification_result: result
+      }
+    });
+  } catch (error) {
+    console.error('🔥 Erreur notification produit:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Route pour envoyer une newsletter personnalisée (admin)
+app.post('/api/admin/send-newsletter', async (req, res) => {
+  try {
+    const { subject, content, segment } = req.body;
+    
+    // Vérification admin
+    const adminToken = req.headers['x-admin-token'];
+    if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non autorisé'
+      });
+    }
+    
+    if (!subject || !content) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sujet et contenu requis'
+      });
+    }
+    
+    // Récupérer les abonnés selon le segment
+    let query = supabase
+      .from('newsletter_subscribers')
+      .select('email, name')
+      .eq('active', true);
+    
+    if (segment === 'recent_customers') {
+      // Clients ayant commandé récemment (dernier mois)
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      
+      // Note: Cette requête nécessite une jointure
+      // Pour simplifier, on prend tous les abonnés
+      console.log('📧 Segment: clients récents (simplifié)');
+    }
+    
+    const { data: subscribers, error } = await query;
+    
+    if (error) throw error;
+    
+    if (!subscribers || subscribers.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Aucun abonné à notifier',
+        count: 0
+      });
+    }
+    
+    console.log(`📧 Envoi newsletter à ${subscribers.length} abonnés...`);
+    
+    const emailService = require('./src/services/emailService');
+    let sentCount = 0;
+    
+    // Envoyer en batch limité
+    for (const subscriber of subscribers.slice(0, 30)) {
+      try {
+        const result = await emailService.sendCustomNewsletter(
+          subscriber.email,
+          subscriber.name,
+          subject,
+          content
+        );
+        
+        if (result && result.success) {
+          sentCount++;
+          console.log(`✅ Newsletter envoyée à: ${subscriber.email}`);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (emailError) {
+        console.error(`❌ Erreur pour ${subscriber.email}:`, emailError.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Newsletter envoyée à ${sentCount}/${subscribers.length} abonnés`,
+      data: {
+        total_subscribers: subscribers.length,
+        sent: sentCount,
+        subject,
+        preview: content.substring(0, 100) + '...'
+      }
+    });
+  } catch (error) {
+    console.error('🔥 Erreur envoi newsletter:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Route pour désinscrire de la newsletter
+app.post('/api/newsletter/unsubscribe', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email requis'
+      });
+    }
+    
+    // Valider l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format email invalide'
+      });
+    }
+    
+    // Désactiver l'abonné
+    const { data, error } = await supabase
+      .from('newsletter_subscribers')
+      .update({
+        active: false,
+        unsubscribed_at: new Date(),
+        updated_at: new Date()
+      })
+      .eq('email', email)
+      .select();
+    
+    if (error) {
+      console.error('❌ Erreur désinscription:', error.message);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Vous avez été désinscrit de notre newsletter avec succès.',
+      data: {
+        email,
+        unsubscribed: true,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('🔥 Erreur désinscription:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la désinscription'
+    });
+  }
+});
+
+// Route pour déclencher manuellement la newsletter hebdomadaire
+app.post('/api/admin/send-weekly-newsletter', async (req, res) => {
+  try {
+    // Vérification admin
+    const adminToken = req.headers['x-admin-token'];
+    if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non autorisé'
+      });
+    }
+    
+    const WeeklyNewsletter = require('./scripts/weeklyNewsletter');
+    const newsletter = new WeeklyNewsletter();
+    
+    // Lancer en arrière-plan
+    newsletter.sendWeeklyDigestToAll()
+      .then(result => {
+        console.log('✅ Newsletter hebdo terminée en arrière-plan:', result);
+      })
+      .catch(error => {
+        console.error('❌ Erreur newsletter hebdo:', error);
+      });
+    
+    res.json({
+      success: true,
+      message: 'Newsletter hebdomadaire lancée en arrière-plan !',
+      data: {
+        started: true,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('🔥 Erreur lancement newsletter:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Route pour tester un email individuel
+app.post('/api/admin/test-weekly-email', async (req, res) => {
+  try {
+    const adminToken = req.headers['x-admin-token'];
+    if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non autorisé'
+      });
+    }
+    
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email de test requis'
+      });
+    }
+    
+    // Simuler des nouveaux produits
+    const testProducts = [
+      {
+        product_id: 'test-1',
+        name: 'Candy Rose Gloss',
+        price: 6000,
+        description: 'Un gloss brillant et confortable en teinte rose bonbon',
+        image_url: 'https://example.com/gloss.jpg'
+      },
+      {
+        product_id: 'test-2',
+        name: 'Lip Balm Hydratant',
+        price: 4500,
+        description: 'Baume à lèvres nourrissant à l\'argan',
+        image_url: 'https://example.com/balm.jpg'
+      }
+    ];
+    
+    const result = await emailService.sendWeeklyDigest(
+      email,
+      'Client Test',
+      testProducts
+    );
+    
+    res.json({
+      success: result.success,
+      message: result.success ? 'Email de test envoyé !' : 'Erreur',
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ======================
+// FONCTIONS UTILITAIRES
+// ======================
+
+/**
+ * Fonction pour gérer automatiquement les clients
+ */
+async function manageCustomer(email, name, phone, address) {
+  try {
+    console.log(`👤 Gestion automatique du client: ${email}`);
+    
+    // Vérifier si le client existe déjà
+    const { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('email', email)
+      .single();
+    
+    if (existingCustomer) {
+      // Mettre à jour le client existant
+      const { data, error } = await supabase
+        .from('customers')
+        .update({
+          name: name || existingCustomer.name,
+          phone: phone || existingCustomer.phone,
+          address: address || existingCustomer.address,
+          last_order_at: new Date(),
+          updated_at: new Date()
+        })
+        .eq('email', email)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Erreur mise à jour client:', error.message);
+        return null;
+      }
+      
+      console.log(`✅ Client mis à jour: ${email}`);
+      return data;
+    } else {
+      // Créer un nouveau client
+      const { data, error } = await supabase
+        .from('customers')
+        .insert([{
+          email,
+          name,
+          phone,
+          address,
+          total_orders: 0,
+          total_spent: 0,
+          created_at: new Date(),
+          last_order_at: new Date()
+        }])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Erreur création client:', error.message);
+        return null;
+      }
+      
+      console.log(`✅ Nouveau client créé: ${email}`);
+      return data;
+    }
+  } catch (error) {
+    console.error('🔥 Erreur dans manageCustomer:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Fonction pour incrémenter les stats d'un client après une commande
+ */
+async function updateCustomerStats(email, orderAmount) {
+  try {
+    console.log(`📊 Mise à jour stats pour: ${email}, montant: ${orderAmount}`);
+    
+    // Appeler la fonction RPC
+    const { error } = await supabase.rpc('increment_customer_stats', {
+      customer_email: email,
+      order_amount: orderAmount
+    });
+    
+    if (error) {
+      console.error('❌ Erreur RPC increment_customer_stats:', error.message);
+      return false;
+    }
+    
+    console.log(`✅ Stats mises à jour pour: ${email}`);
+    return true;
+  } catch (error) {
+    console.error('🔥 Erreur dans updateCustomerStats:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Fonction pour envoyer une notification de nouveau produit aux abonnés
+ */
+async function sendProductNotificationToSubscribers(productData) {
+  try {
+    console.log(`📢 Notification nouveau produit: ${productData.name}`);
+    
+    // Récupérer tous les abonnés actifs à la newsletter
+    const { data: subscribers, error } = await supabase
+      .from('newsletter_subscribers')
+      .select('email, name')
+      .eq('active', true);
+    
+    if (error) {
+      console.error('❌ Erreur récupération abonnés:', error.message);
+      return { success: false, error: error.message };
+    }
+    
+    if (!subscribers || subscribers.length === 0) {
+      console.log('ℹ️ Aucun abonné à la newsletter');
+      return { success: true, count: 0, message: 'Aucun abonné' };
+    }
+    
+    console.log(`📧 Envoi à ${subscribers.length} abonnés...`);
+    
+    const emailService = require('./src/services/emailService');
+    let sentCount = 0;
+    
+    // Envoyer à chaque abonné (en batch pour éviter de surcharger)
+    for (const subscriber of subscribers.slice(0, 50)) { // Limite à 50 pour le test
+      try {
+        const result = await emailService.sendNewProductNotification(
+          subscriber.email,
+          subscriber.name,
+          productData
+        );
+        
+        if (result && result.success) {
+          sentCount++;
+          console.log(`✅ Email envoyé à: ${subscriber.email}`);
+        }
+        
+        // Petite pause pour éviter le spam
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (emailError) {
+        console.error(`❌ Erreur email pour ${subscriber.email}:`, emailError.message);
+      }
+    }
+    
+    return {
+      success: true,
+      count: sentCount,
+      total: subscribers.length,
+      message: `Notifications envoyées à ${sentCount}/${subscribers.length} abonnés`
+    };
+  } catch (error) {
+    console.error('🔥 Erreur dans sendProductNotificationToSubscribers:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 // Gestion des erreurs 404
 app.use((req, res) => {

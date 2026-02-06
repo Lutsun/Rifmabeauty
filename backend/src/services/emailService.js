@@ -511,7 +511,414 @@ L'équipe RIFMA Beauty
   `.trim();
 }
 
+
+// Ajoutez ces méthodes à la fin de la classe EmailService (avant module.exports)
+
+/**
+ * Envoie une notification de nouveau produit à un abonné
+ */
+async sendNewProductNotification(email, name, productData) {
+  try {
+    console.log(`📦 Notification produit à ${email}: ${productData.name}`);
+    
+    const html = this.generateNewProductEmailHTML(email, name, productData);
+    const text = this.generateNewProductEmailText(email, name, productData);
+    
+    const result = await this.service.sendEmail({
+      to: email,
+      subject: `🎉 Nouveau produit RIFMA Beauty : ${productData.name} !`,
+      html,
+      text,
+      replyTo: process.env.OWNER_EMAIL
+    });
+    
+    console.log(`✅ Notification produit envoyée à: ${email}`);
+    return result;
+  } catch (error) {
+    console.error(`❌ Erreur notification produit à ${email}:`, error.message);
+    return { 
+      success: false, 
+      error: error.message,
+      to: email
+    };
+  }
 }
+
+/**
+ * Envoie une newsletter personnalisée
+ */
+async sendCustomNewsletter(email, name, subject, content) {
+  try {
+    console.log(`📰 Newsletter à ${email}: ${subject.substring(0, 30)}...`);
+    
+    const html = this.generateCustomNewsletterHTML(email, name, subject, content);
+    const text = this.generateCustomNewsletterText(email, name, subject, content);
+    
+    const result = await this.service.sendEmail({
+      to: email,
+      subject: subject,
+      html,
+      text,
+      replyTo: process.env.OWNER_EMAIL
+    });
+    
+    console.log(`✅ Newsletter envoyée à: ${email}`);
+    return result;
+  } catch (error) {
+    console.error(`❌ Erreur newsletter à ${email}:`, error.message);
+    return { 
+      success: false, 
+      error: error.message,
+      to: email
+    };
+  }
+}
+
+/**
+ * Envoie un digest hebdomadaire des nouveautés
+ */
+async sendWeeklyDigest(email, name, newProducts) {
+  try {
+    console.log(`📅 Digest hebdo à ${email}: ${newProducts.length} produits`);
+    
+    const html = this.generateWeeklyDigestHTML(email, name, newProducts);
+    const text = this.generateWeeklyDigestText(email, name, newProducts);
+    
+    const result = await this.service.sendEmail({
+      to: email,
+      subject: `📦 Vos nouveautés RIFMA de la semaine !`,
+      html,
+      text,
+      replyTo: process.env.OWNER_EMAIL
+    });
+    
+    console.log(`✅ Digest hebdo envoyé à: ${email}`);
+    return result;
+  } catch (error) {
+    console.error(`❌ Erreur digest hebdo à ${email}:`, error.message);
+    return { 
+      success: false, 
+      error: error.message,
+      to: email
+    };
+  }
+}
+
+/**
+ * Envoie une notification d'abandon de panier
+ */
+async sendCartReminder(email, name, cartItems) {
+  try {
+    console.log(`🛒 Rappel panier à ${email}: ${cartItems.length} articles`);
+    
+    const html = this.generateCartReminderHTML(email, name, cartItems);
+    const text = this.generateCartReminderText(email, name, cartItems);
+    
+    const result = await this.service.sendEmail({
+      to: email,
+      subject: `👀 Vous avez oublié quelque chose chez RIFMA Beauty...`,
+      html,
+      text,
+      replyTo: process.env.OWNER_EMAIL
+    });
+    
+    console.log(`✅ Rappel panier envoyé à: ${email}`);
+    return result;
+  } catch (error) {
+    console.error(`❌ Erreur rappel panier à ${email}:`, error.message);
+    return { 
+      success: false, 
+      error: error.message,
+      to: email
+    };
+  }
+}
+
+// ======================
+// GÉNÉRATEURS HTML/TEXT
+// ======================
+
+generateNewProductEmailHTML(email, name, productData) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; }
+        .header { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .product-card { background: #f8f9fa; border-radius: 15px; padding: 25px; margin: 25px 0; text-align: center; }
+        .product-image { max-width: 250px; height: auto; border-radius: 10px; margin: 20px auto; display: block; }
+        .product-name { color: #e91e63; font-size: 24px; margin: 15px 0; }
+        .price-tag { background: #e91e63; color: white; padding: 8px 20px; border-radius: 20px; display: inline-block; font-weight: bold; }
+        .button { display: inline-block; background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
+        .emoji { font-size: 20px; margin-right: 8px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; font-weight: 300;">🎀 NOUVEAUTÉ EXCLUSIVE</h1>
+          <p style="opacity: 0.9; margin: 10px 0 0;">RIFMA Beauty vous présente...</p>
+        </div>
+        
+        <div class="content">
+          <h2>Bonjour ${firstName} ! 👋</h2>
+          <p>Nous sommes tellement excités de vous présenter notre dernière création ! On l'a préparée avec amour rien que pour vous 💕</p>
+          
+          <div class="product-card">
+            <span class="emoji">✨</span>
+            <h3 class="product-name">${productData.name}</h3>
+            
+            ${productData.image ? `<img src="${productData.image}" alt="${productData.name}" class="product-image" />` : ''}
+            
+            <div style="margin: 20px 0;">
+              <p>${productData.description}</p>
+              <div class="price-tag">${productData.price.toLocaleString()} FCFA</div>
+            </div>
+            
+            ${productData.custom_message ? `
+              <div style="background: #fff8f8; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                <p><strong>✨ Message spécial :</strong> ${productData.custom_message}</p>
+              </div>
+            ` : ''}
+            
+            <p style="margin: 25px 0;">Prêt(e) à essayer cette pépite ?</p>
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products/${productData.id}" class="button">
+              🛍️ Découvrir ce produit
+            </a>
+          </div>
+          
+          <p><strong>🎁 Bonus exclusif :</strong> Utilisez le code <strong>BIENVENUE10</strong> pour 10% de réduction sur votre première commande avec ce produit !</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <p>À très vite sur RIFMA Beauty,<br>
+            <span style="color: #e91e63;">L'équipe qui pense à votre beauté 💄</span></p>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p><span class="emoji">💕</span> Merci de faire partie de la famille RIFMA Beauty</p>
+          <p><small>Vous recevez cet email car vous êtes inscrit(e) à notre newsletter.</small></p>
+          <p><small><a href="${process.env.BACKEND_URL || 'http://localhost:5000'}/api/newsletter/unsubscribe" style="color: #666;">Se désinscrire</a></small></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+generateWeeklyDigestHTML(email, name, newProducts) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  const today = new Date();
+  const weekNumber = Math.ceil((today.getDate() + 32 - today.getDay()) / 7);
+  
+  const productCards = newProducts.map(product => `
+    <div style="background: white; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        ${product.image_url ? `
+          <div style="flex-shrink: 0;">
+            <img src="${product.image_url}" alt="${product.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;" />
+          </div>
+        ` : ''}
+        <div style="flex-grow: 1;">
+          <h4 style="margin: 0 0 10px; color: #e91e63;">${product.name}</h4>
+          <p style="margin: 0 0 10px; color: #666; font-size: 14px;">${product.description?.substring(0, 100)}${product.description?.length > 100 ? '...' : ''}</p>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold; color: #e91e63;">${product.price.toLocaleString()} FCFA</span>
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products/${product.product_id}" style="background: #f8a5c2; color: white; padding: 6px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">
+              Voir
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; background: linear-gradient(to bottom, #fffafb, #fff); }
+        .header { background: linear-gradient(135deg, #000000 0%, #2d2d2d 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 0 0 20px 20px; }
+        .content { padding: 30px; }
+        .week-badge { background: #e91e63; color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; display: inline-block; }
+        .tip-box { background: #fff8f8; border-left: 4px solid #e91e63; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0; }
+        .button { display: inline-block; background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 10px; margin: 15px 0; font-weight: bold; box-shadow: 0 4px 15px rgba(233, 30, 99, 0.3); }
+        .footer { background: #f8f9fa; padding: 25px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
+        .social-icons { margin: 20px 0; }
+        .social-icons a { margin: 0 10px; color: #e91e63; text-decoration: none; font-size: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; font-weight: 300; font-size: 32px;">💌 Votre rendez-vous beauté de la semaine</h1>
+          <p style="opacity: 0.9; margin: 10px 0 0; font-size: 18px;">Semaine ${weekNumber} • ${today.toLocaleDateString('fr-FR', { month: 'long', day: 'numeric' })}</p>
+        </div>
+        
+        <div class="content">
+          <h2 style="color: #e91e63;">Bonjour ${firstName} ! 🌸</h2>
+          <p>Comme chaque semaine, on est là pour vous gâter ! Voici ce qui vous attend chez RIFMA Beauty...</p>
+          
+          <div class="week-badge">📦 NOUVEAUTÉS DE LA SEMAINE</div>
+          
+          ${newProducts.length > 0 ? `
+            <p>Notre équipe a déniché ${newProducts.length > 1 ? 'ces pépites' : 'cette pépite'} rien que pour vous :</p>
+            ${productCards}
+          ` : `
+            <div style="text-align: center; padding: 40px 20px; background: #f8f9fa; border-radius: 10px; margin: 20px 0;">
+              <p style="font-size: 20px;">✨</p>
+              <p>Aucun nouveau produit cette semaine, mais pas d'inquiétude !</p>
+              <p>Notre équipe prépare quelque chose d'extra pour la prochaine édition 💕</p>
+            </div>
+          `}
+          
+          <div class="tip-box">
+            <h4 style="margin-top: 0; color: #e91e63;">💡 ASTUCE BEAUTÉ DE LA SEMAINE</h4>
+            <p>${this.getRandomBeautyTip()}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 40px 0;">
+            <p style="font-size: 18px; margin-bottom: 20px;">Envie de découvrir tous nos produits ?</p>
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products" class="button">
+              🛍️ Explorer la boutique
+            </a>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
+            <h4 style="color: #e91e63; margin-top: 0;">🎁 OFFRE SPÉCIALE</h4>
+            <p>Cette semaine, bénéficiez de <strong>10% de réduction</strong> avec le code :</p>
+            <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; margin: 15px 0; border: 2px dashed #e91e63;">
+              <p style="font-size: 22px; font-weight: bold; letter-spacing: 2px; color: #e91e63; margin: 0;">SEMAINE${weekNumber}</p>
+            </div>
+            <p><small>Valable jusqu'au ${this.getEndOfWeekDate()} sur tout le site !</small></p>
+          </div>
+          
+          <div class="social-icons">
+            <p>Suivez-nous pour plus de conseils :</p>
+            <a href="https://instagram.com/rifmabeauty">📸 Instagram</a>
+            <a href="https://facebook.com/rifmabeauty">👍 Facebook</a>
+            <a href="https://tiktok.com/@rifmabeauty">🎵 TikTok</a>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p><span style="color: #e91e63;">💄</span> Avec toute notre affection, l'équipe RIFMA Beauty</p>
+          <p><small>123 Dakar plateau, 75008 Dakar, Sénégal • +221 78 717 10 10</small></p>
+          <p><small><a href="${process.env.BACKEND_URL || 'http://localhost:5000'}/api/newsletter/unsubscribe" style="color: #999;">Se désinscrire de cette newsletter</a></small></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// Ajoutez ces méthodes utilitaires à la classe
+getRandomBeautyTip() {
+  const tips = [
+    "💧 N'oubliez pas de bien démaquiller votre peau chaque soir pour la laisser respirer !",
+    "🌸 Appliquez votre crème hydratante sur peau légèrement humide pour une meilleure absorption.",
+    "✨ Pour un effet glow naturel, mélangez votre fond de teint avec une goutte d'illuminateur.",
+    "💕 Un gommage doux une fois par semaine révèle une peau toute neuve !",
+    "🫒 Les huiles végétales sont vos alliées pour nourrir en profondeur sans graisser.",
+    "🌞 Toujours appliquer de la crème solaire, même quand il ne fait pas beau !",
+    "💄 Pour un rouge à lèvres qui tient, appliquez, essuyez avec un mouchoir, puis réappliquez.",
+    "👁️ Commencez votre maquillage des yeux AVANT le teint pour éviter les retombées.",
+    "🌟 Un spray d'eau thermale rafraîchit et fixe le maquillage en fin de routine.",
+    "🥒 Les patches pour les yeux au réfrigérateur sont parfaits pour dégonfler le matin !"
+  ];
+  return tips[Math.floor(Math.random() * tips.length)];
+}
+
+getEndOfWeekDate() {
+  const today = new Date();
+  const daysUntilSunday = 7 - today.getDay();
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() + daysUntilSunday);
+  return endOfWeek.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+generateNewProductEmailText(email, name, productData) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  return `
+NOUVELLE CRÉATION RIFMA BEAUTY ✨
+
+Bonjour ${firstName},
+
+Nous sommes ravis de vous présenter notre dernier-né :
+
+🎀 ${productData.name}
+💵 ${productData.price.toLocaleString()} FCFA
+📝 ${productData.description}
+
+${productData.custom_message ? `✨ Message spécial : ${productData.custom_message}` : ''}
+
+Découvrez-le dès maintenant :
+${process.env.FRONTEND_URL || 'http://localhost:5173'}/products/${productData.id}
+
+🎁 BONUS : Utilisez le code BIENVENUE10 pour 10% de réduction !
+
+À très vite sur RIFMA Beauty,
+L'équipe qui pense à votre beauté 💄
+  `.trim();
+}
+
+generateWeeklyDigestText(email, name, newProducts) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  const today = new Date();
+  const weekNumber = Math.ceil((today.getDate() + 32 - today.getDay()) / 7);
+  
+  let productsText = '';
+  if (newProducts.length > 0) {
+    productsText = 'NOUVEAUTÉS DE LA SEMAINE :\n' +
+      newProducts.map(p => `• ${p.name} - ${p.price.toLocaleString()} FCFA`).join('\n');
+  } else {
+    productsText = 'Aucun nouveau produit cette semaine, mais préparez-vous pour la prochaine édition !';
+  }
+  
+  return `
+VOTRE RENDEZ-VOUS HEBDOMADAIRE RIFMA BEAUTY 💌
+
+Bonjour ${firstName},
+
+Semaine ${weekNumber} • ${today.toLocaleDateString('fr-FR', { month: 'long', day: 'numeric' })}
+
+${productsText}
+
+💡 ASTUCE BEAUTÉ :
+${this.getRandomBeautyTip()}
+
+🎁 OFFRE EXCLUSIVE :
+Code : SEMAINE${weekNumber}
+→ 10% de réduction valable jusqu'au ${this.getEndOfWeekDate()}
+
+🛍️ Explorer la boutique :
+${process.env.FRONTEND_URL || 'http://localhost:5173'}/products
+
+Suivez-nous :
+📸 Instagram : https://instagram.com/rifmabeauty
+👍 Facebook : https://facebook.com/rifmabeauty
+🎵 TikTok : https://tiktok.com/@rifmabeauty
+
+Merci de faire partie de la famille RIFMA Beauty 💕
+
+Pour vous désinscrire :
+${process.env.BACKEND_URL || 'http://localhost:5000'}/api/newsletter/unsubscribe
+  `.trim();
+}
+
+}
+
+
 
 
 module.exports = new EmailService();

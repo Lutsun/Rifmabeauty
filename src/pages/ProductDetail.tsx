@@ -86,7 +86,7 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
           <div className="space-y-4">
             <div className="aspect-square bg-white overflow-hidden">
               <img
-                src={product.image}
+                src={product.detailImage || product.image}
                 alt={product.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {

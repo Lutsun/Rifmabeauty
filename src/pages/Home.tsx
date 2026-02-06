@@ -20,7 +20,9 @@ export default function Home({ onNavigate }: HomeProps) {
     setLoading(true);
     try {
       const prods = await apiService.getAllProducts(undefined, true);
-      setFeaturedProducts(prods);
+     
+      const limitedProds = prods.slice(0, 3);
+      setFeaturedProducts(limitedProds);
       setError(null);
     } catch (err) {
       console.error('Error fetching featured products:', err);

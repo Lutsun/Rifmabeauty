@@ -12,6 +12,7 @@ export interface Product {
   featured: boolean;
   stock: number;
   inStock: boolean;
+  detailImage?: string;
 }
 
 export const apiService = {

@@ -90,17 +90,22 @@ app.get('/api/products', async (req, res) => {
     
     console.log('✅ Test réussi, données:', testData);
     
-    // Maintenant la vraie requête
-    let query = supabase.from('products').select('*');
-    
-    if (category && category !== 'all') {
-      query = query.eq('category', category);
-    }
-    
-    if (featured !== undefined) {
-    const isFeatured = featured === 'true'
-    query = query.eq('featured', isFeatured)
-  }
+    // Nouvelle version avec tri par sort_order :
+let query = supabase
+  .from('products')
+  .select('*')
+  .order('sort_order', { ascending: true })    // TRI PAR VOTRE NOUVELLE COLONNE
+  .order('category', { ascending: true })     
+  .order('name', { ascending: true });         
+
+if (category && category !== 'all') {
+  query = query.eq('category', category);
+}
+
+if (featured !== undefined) {
+  const isFeatured = featured === 'true';
+  query = query.eq('featured', isFeatured);
+}
     
     console.log('🔍 Exécution de la requête finale...');
     const { data, error } = await query;
@@ -129,7 +134,8 @@ app.get('/api/products', async (req, res) => {
         shade: p.shade,
         featured: p.featured,
         stock: p.stock,
-        inStock: p.in_stock
+        inStock: p.in_stock,
+        detailImage: p.detail_image_url || p.image_url 
       }))
     });
   } catch (error) {
@@ -168,7 +174,8 @@ app.get('/api/products/:id', async (req, res) => {
         shade: data.shade,
         featured: data.featured,
         stock: data.stock,
-        inStock: data.in_stock
+        inStock: data.in_stock,
+        detailImage: data.detail_image_url || data.image_url
       }
     });
   } catch (error) {

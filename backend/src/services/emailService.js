@@ -916,6 +916,205 @@ ${process.env.BACKEND_URL || 'http://localhost:5000'}/api/newsletter/unsubscribe
   `.trim();
 }
 
+// Dans emailService.js - Ajoutez ces méthodes
+
+/**
+ * Génère le HTML pour une newsletter personnalisée
+ */
+generateCustomNewsletterHTML(email, name, subject, content) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; }
+        .header { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .custom-content { background: #f8f9fa; border-radius: 10px; padding: 25px; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
+        .button { display: inline-block; background: #e91e63; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; margin: 10px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; font-weight: 300;">${subject}</h1>
+          <p style="opacity: 0.9; margin: 10px 0 0;">RIFMA Beauty Newsletter</p>
+        </div>
+        
+        <div class="content">
+          <h2>Bonjour ${firstName} ! 👋</h2>
+          <p>Comme promis, voici votre newsletter personnalisée :</p>
+          
+          <div class="custom-content">
+            ${content}
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <p>Restons en contact :</p>
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" class="button">
+              🛍️ Visiter la boutique
+            </a>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>RIFMA Beauty - Votre beauté, notre passion 💄</p>
+          <p><small>Vous recevez cet email car vous êtes inscrit(e) à notre newsletter.</small></p>
+          <p><small><a href="${process.env.BACKEND_URL || 'http://localhost:5000'}/api/newsletter/unsubscribe" style="color: #666;">Se désinscrire</a></small></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Génère le texte pour une newsletter personnalisée
+ */
+generateCustomNewsletterText(email, name, subject, content) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  
+  // Extraire le texte du HTML (simplifié)
+  const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  return `
+${subject}
+${'='.repeat(subject.length)}
+
+Bonjour ${firstName},
+
+Voici votre newsletter personnalisée RIFMA Beauty :
+
+${textContent}
+
+Visitez notre boutique : ${process.env.FRONTEND_URL || 'http://localhost:5173'}
+
+Merci de faire partie de la famille RIFMA Beauty !
+
+Pour vous désinscrire : ${process.env.BACKEND_URL || 'http://localhost:5000'}/api/newsletter/unsubscribe
+  `.trim();
+}
+
+/**
+ * Génère le HTML pour un rappel de panier
+ */
+generateCartReminderHTML(email, name, cartItems) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  const itemsHTML = cartItems.map(item => `
+    <div style="display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee;">
+      <div style="flex-grow: 1;">
+        <p style="margin: 0; font-weight: bold;">${item.name}</p>
+        <p style="margin: 5px 0; color: #666;">Qté: ${item.quantity} × ${item.price.toLocaleString()} FCFA</p>
+      </div>
+      <div style="font-weight: bold; color: #e91e63;">
+        ${(item.price * item.quantity).toLocaleString()} FCFA
+      </div>
+    </div>
+  `).join('');
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; }
+        .header { background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); color: #721c24; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .cart-items { background: white; border-radius: 10px; border: 1px solid #eee; margin: 20px 0; }
+        .total { background: #f8f9fa; padding: 20px; border-radius: 10px; text-align: center; font-size: 18px; }
+        .button { display: inline-block; background: #e91e63; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; margin: 10px 0; font-weight: bold; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; font-weight: 300;">👀 Votre panier vous attend...</h1>
+          <p style="opacity: 0.9; margin: 10px 0 0;">Ne laissez pas ces trésors vous échapper !</p>
+        </div>
+        
+        <div class="content">
+          <h2>Bonjour ${firstName},</h2>
+          <p>Nous avons remarqué que vous aviez laissé quelques articles dans votre panier RIFMA Beauty.</p>
+          <p>Ils sont toujours disponibles et n'attendent que vous ! 💕</p>
+          
+          <div class="cart-items">
+            ${itemsHTML}
+          </div>
+          
+          <div class="total">
+            <p style="margin: 0;">Total du panier :</p>
+            <p style="font-size: 28px; font-weight: bold; color: #e91e63; margin: 10px 0;">${total.toLocaleString()} FCFA</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <p>Terminez votre commande en quelques clics :</p>
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/cart" class="button">
+              🛒 Reprendre mon panier
+            </a>
+          </div>
+          
+          <div style="background: #fff8f8; padding: 20px; border-radius: 10px; margin: 30px 0;">
+            <h3 style="color: #e91e63; margin-top: 0;">✨ Offre spéciale</h3>
+            <p>Pour vous aider à finaliser votre commande, utilisez le code :</p>
+            <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; border: 2px dashed #e91e63;">
+              <p style="font-size: 22px; font-weight: bold; letter-spacing: 2px; color: #e91e63; margin: 0;">PANIER10</p>
+              <p style="margin: 10px 0 0; color: #666;">10% de réduction valable 24h</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>RIFMA Beauty - Votre beauté, notre passion 💄</p>
+          <p><small>Cet email est envoyé automatiquement suite à l'abandon de votre panier.</small></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Génère le texte pour un rappel de panier
+ */
+generateCartReminderText(email, name, cartItems) {
+  const firstName = name ? name.split(' ')[0] : 'cher client';
+  const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  const itemsText = cartItems.map(item => 
+    `- ${item.name} (x${item.quantity}) : ${(item.price * item.quantity).toLocaleString()} FCFA`
+  ).join('\n');
+  
+  return `
+RAPPEL DE PANIER RIFMA BEAUTY
+
+Bonjour ${firstName},
+
+Nous avons remarqué que vous aviez laissé quelques articles dans votre panier :
+
+${itemsText}
+
+Total : ${total.toLocaleString()} FCFA
+
+Terminez votre commande en quelques clics :
+${process.env.FRONTEND_URL || 'http://localhost:5173'}/cart
+
+✨ OFFRE SPÉCIALE : Utilisez le code PANIER10 pour 10% de réduction valable 24h !
+
+À bientôt sur RIFMA Beauty,
+L'équipe 💄
+  `.trim();
+}
+
 }
 
 

@@ -20,6 +20,16 @@ async function startServer() {
     
     console.log('✅ Connexion Supabase établie');
     
+    // Démarre également cron si activé
+    if (process.env.ENABLE_CRON === 'true') {
+      console.log('⏰ Démarrage du système cron...');
+      require('./cron');
+      console.log('✅ Système cron démarré !');
+    } else {
+      console.log('⏸️  Système cron désactivé (ENABLE_CRON ≠ true)');
+    }
+    // ================================================
+    
     // Démarre le serveur Express
     const server = app.listen(PORT, () => {
       console.log('\n' + '='.repeat(50));
@@ -28,6 +38,13 @@ async function startServer() {
       console.log(`🌐 Port: ${PORT}`);
       console.log(`🔧 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📡 URL: http://localhost:${PORT}`);
+      
+      // ======== Verification du cron ========
+      if (process.env.ENABLE_CRON === 'true') {
+        console.log('⏰ Cron: Activé - Newsletter tous les lundis 10h');
+      }
+      // ==========================================
+      
       console.log('\n📦 ENDPOINTS DISPONIBLES:');
       console.log('   📍 GET  /                     - Page d\'accueil API');
       console.log('   📍 GET  /api/health           - Vérification santé');

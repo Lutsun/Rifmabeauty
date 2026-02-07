@@ -420,28 +420,25 @@ export default function Contact() {
       </section>
 
       <section className="py-16 bg-stone-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white p-8 md:p-12 text-center space-y-6">
-            <h2 className="text-3xl font-light tracking-wide text-gray-900">
-              Horaires d'ouverture
-            </h2>
-            <div className="max-w-md mx-auto space-y-3 text-gray-600 font-light">
-              <div className="flex justify-between">
-                <span>Lundi - Vendredi</span>
-                <span>10h00 - 19h00</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Samedi</span>
-                <span>10h00 - 18h00</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Dimanche</span>
-                <span>Fermé</span>
-              </div>
-            </div>
-          </div>
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="bg-white p-8 md:p-12 text-center space-y-6">
+      <h2 className="text-3xl font-light tracking-wide text-gray-900">
+        Horaires d'ouverture
+      </h2>
+      <div className="max-w-md mx-auto space-y-3 text-gray-600 font-light">
+        <div className="flex justify-between">
+          <span>Lundi - Dimanche</span>
+          <span>7j/7 - 24h/24</span>
         </div>
-      </section>
+        <div className="pt-4 mt-4 border-t border-gray-200">
+          <p className="text-sm text-gray-500 italic">
+            Boutique en ligne accessible 24h/24 - 7j/7
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
     </div>
   );
 }

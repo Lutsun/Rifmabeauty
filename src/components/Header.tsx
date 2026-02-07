@@ -1,4 +1,4 @@
-import { ShoppingBag, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import CartIcon from '../components/CartIcon';
 
@@ -23,7 +23,7 @@ export default function Header({ currentPage, onNavigate }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
          <img
-          src="/assets/images/RB_logo2.JPG"
+          src="https://ucliznuennmgiyjsxgrk.supabase.co/storage/v1/object/public/images/RB_logo2.JPG"
           alt="RIFMA Beauty"
           onClick={() => onNavigate("home")}
           className="

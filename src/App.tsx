@@ -7,8 +7,8 @@ import ProductDetail from './pages/ProductDetail';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import CheckoutPage from './pages/CheckoutPage'; 
-import CartDrawer from './components/CartDrawer'; // À créer
-import { CartProvider } from './components/CartContext'; // À créer
+import CartDrawer from './components/CartDrawer'; 
+import { CartProvider } from './components/CartContext'; 
 
 type Page = 'home' | 'shop' | 'product' | 'about' | 'contact' | 'checkout';
 
@@ -83,7 +83,7 @@ function App() {
           {renderPage()}
         </main>
 
-        <Footer />
+        <Footer onNavigate={handleNavigate}/>
       </div>
     </CartProvider>
   );

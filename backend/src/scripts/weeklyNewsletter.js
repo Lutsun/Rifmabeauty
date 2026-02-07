@@ -1,7 +1,7 @@
 // scripts/weeklyNewsletter.js
 require('dotenv').config();
-const { supabase } = require('../src/config/supabase');
-const emailService = require('../src/services/emailService');
+const { supabase } = require('../config/supabase');
+const emailService = require('../services/emailService');
 
 class WeeklyNewsletter {
   constructor() {

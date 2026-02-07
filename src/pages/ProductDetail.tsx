@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ShoppingBag, Heart } from 'lucide-react';
+import { ChevronLeft, ShoppingBag, Truck, Shield } from 'lucide-react';
 import { apiService, Product } from '../services/apiService'; 
 import { useCart } from '../components/CartContext';
 
@@ -123,40 +123,86 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
 
             <div className="space-y-4 pt-4">
               <button 
-              onClick={() => addToCart(product)}
-              className="w-full bg-black text-white py-4 px-8 hover:bg-gray-900 transition-all duration-300 flex items-center justify-center space-x-3 group"
-              disabled={!product.inStock}
-            >
-              <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-light tracking-widest uppercase">
-                {product.inStock ? 'Ajouter au panier' : 'Rupture de stock'}
-              </span>
-            </button>
-
-              <button className="w-full border-2 border-gray-300 text-gray-700 py-4 px-8 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center space-x-3 group">
-                <Heart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                onClick={() => addToCart(product)}
+                className="w-full bg-black text-white py-4 px-8 hover:bg-gray-900 transition-all duration-300 flex items-center justify-center space-x-3 group"
+                disabled={!product.inStock}
+              >
+                <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 <span className="text-sm font-light tracking-widest uppercase">
-                  Ajouter aux favoris
+                  {product.inStock ? 'Ajouter au panier' : 'Rupture de stock'}
                 </span>
               </button>
             </div>
 
+            {/* Section Paiement améliorée */}
             <div className="border-t border-gray-200 pt-8 space-y-6">
-              <div>
-                <h3 className="text-sm font-light tracking-wider uppercase text-gray-900 mb-2">
-                  Livraison
-                </h3>
-                <p className="text-gray-600 text-sm font-light">
-                  Livraison offerte à partir de 50€ d'achat
-                </p>
+              <div className="flex items-start space-x-4">
+                <Truck className="w-6 h-6 text-gray-500 mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="text-xl font-light tracking-wider text-gray-900 mb-1">
+                    Paiement à la livraison
+                  </h3>
+                  <p className="text-gray-600 text-sm font-light mb-4">
+                    Payez directement à la réception de votre commande en toute sécurité
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-light tracking-wider uppercase text-gray-900 mb-2">
-                  Retours
-                </h3>
-                <p className="text-gray-600 text-sm font-light">
-                  Retours gratuits sous 30 jours
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <Shield className="w-6 h-6 text-gray-500 mt-1 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-lg font-light tracking-wide text-gray-900 mb-3">
+                      Moyens de paiement acceptés
+                    </h4>
+                    <p className="text-gray-600 text-sm font-light mb-4">
+                      Vous pouvez régler votre commande avec :
+                    </p>
+                    
+                    {/* Icônes de paiement */}
+                    <div className="flex flex-wrap gap-4 items-center mt-4">
+                      {/* Wave */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-[#00B2A9] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-sm tracking-wide">WAVE</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Mobile Money</span>
+                      </div>
+                      
+                      {/* Orange Money */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-[#FF6600] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-xs tracking-wide">ORANGE</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Mobile Money</span>
+                      </div>
+                      
+                      {/* Visa */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-gradient-to-r from-[#1A1F71] to-[#2A3284] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-xl tracking-tighter">VISA</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Carte bancaire</span>
+                      </div>
+                      
+                      {/* Mastercard */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-gradient-to-r from-[#EB001B] to-[#FF5F00] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-sm tracking-wide">Mastercard</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Carte bancaire</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Message d'information */}
+              <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 mt-6">
+                <p className="text-sm text-gray-700 font-light">
+                  <span className="font-medium text-rose-700">💡 Bon à savoir : </span>
+                  Vous pouvez également payer en espèces si vous le souhaitez. 
+                  Notre livreur vous apportera votre commande avec une machine de paiement mobile.
                 </p>
               </div>
             </div>

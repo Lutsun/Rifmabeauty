@@ -1,4 +1,6 @@
-import { Instagram, Facebook, Mail } from 'lucide-react';
+import { Instagram } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSnapchat, faTiktok } from '@fortawesome/free-brands-svg-icons';
 
 interface FooterProps {
   onNavigate: (page: string) => void;
@@ -63,14 +65,29 @@ export default function Footer({ onNavigate }: FooterProps) {
           <div>
             <h4 className="text-sm font-light tracking-wider uppercase mb-4">Suivez-nous</h4>
             <div className="flex space-x-4">
-              <a href="#" className="text-white/60 hover:text-rose-200 transition-colors">
+              <a 
+                href="https://www.instagram.com/rifma_beauty/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white/60 hover:text-rose-200 transition-colors"
+              >
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="text-white/60 hover:text-rose-200 transition-colors">
-                <Facebook className="w-5 h-5" />
+              <a 
+                href="https://www.snapchat.com/add/rifma_beauty" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white/60 hover:text-rose-200 transition-colors"
+              >
+                <FontAwesomeIcon icon={faSnapchat} className="w-5 h-5" />
               </a>
-              <a href="#" className="text-white/60 hover:text-rose-200 transition-colors">
-                <Mail className="w-5 h-5" />
+              <a 
+                href="https://www.tiktok.com/@rifma.beauty" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-white/60 hover:text-rose-200 transition-colors"
+              >
+                <FontAwesomeIcon icon={faTiktok} className="w-5 h-5" />
               </a>
             </div>
           </div>

@@ -159,8 +159,8 @@ export default function CartDrawer({ onNavigate }: CartDrawerProps) {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Livraison</span>
-                  <span className="font-light">
-                    {shippingFee === 0 ? 'Gratuite' : `${shippingFee} FCFA`}
+                  <span className="font-light text-green-600 flex items-center gap-1">
+                    Tarif flexible selon votre zone - Nous consulter
                   </span>
                 </div>
                 <div className="flex justify-between text-lg pt-4 border-t border-gray-200">

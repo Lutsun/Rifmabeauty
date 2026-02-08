@@ -1,7 +1,7 @@
 // cron.js
 require('dotenv').config();
 const cron = require('node-cron');
-const WeeklyNewsletter = require('./src/scripts/weeklyNewsletter');
+const WeeklyNewsletter = require('./scripts/weeklyNewsletter');
 
 console.log('⏰ Initialisation du système de newsletters automatiques...');
 

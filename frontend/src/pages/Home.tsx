@@ -39,7 +39,7 @@ export default function Home({ onNavigate }: HomeProps) {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: 'url(/assets/images/RBHome.JPG)',
+            backgroundImage: 'url(https://ucliznuennmgiyjsxgrk.supabase.co/storage/v1/object/public/images/RBHome.JPG)',
             backgroundPosition: 'center 15%',
           }}
         >

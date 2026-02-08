@@ -132,7 +132,7 @@ export default function Contact() {
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage: 'url(/assets/images/lipbalm4.JPG)',
+              backgroundImage: 'url(https://ucliznuennmgiyjsxgrk.supabase.co/storage/v1/object/public/images/lipbalm4.JPG)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}

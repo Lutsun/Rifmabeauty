@@ -1,5 +1,5 @@
-// Supprimez process.env.VITE_API_URL et utilisez directement la variable
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// CORRECTION : Ne pas mettre /api à la fin de l'URL de base
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export interface Product {
   id: string;
@@ -18,9 +18,11 @@ export interface Product {
 export const apiService = {
   async getAllProducts(category?: string, featured?: boolean): Promise<Product[]> {
     try {
-      console.log('Fetching products from:', API_URL);
+      console.log('🌍 Environnement:', import.meta.env.MODE);
+      console.log('📡 URL de base:', API_BASE_URL);
       
-      let url = `${API_URL}/api/products`;
+      // CORRECT : ${API_BASE_URL}/api/products (pas /api/api/products)
+      let url = `${API_BASE_URL}/api/products`;
       const params = new URLSearchParams();
       
       if (category && category !== 'all') {
@@ -36,32 +38,40 @@ export const apiService = {
         url += `?${queryString}`;
       }
       
-      console.log('Full URL:', url);
+      console.log('🔗 URL complète:', url);
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Erreur HTTP:', response.status, errorText);
+        throw new Error(`Erreur ${response.status}: Impossible de charger les produits`);
       }
       
       const data = await response.json();
       
-      console.log('API response:', data);
+      console.log('✅ Réponse API:', data);
       
       if (data.success) {
-        return data.data;
+        console.log(`📦 ${data.data?.length || 0} produits récupérés`);
+        return data.data || [];
       } else {
-        throw new Error(data.message || 'Failed to fetch products');
+        throw new Error(data.message || 'Échec de récupération des produits');
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('🔥 Erreur fetch produits:', error);
       throw error;
     }
   },
 
   async getProductById(id: string): Promise<Product | null> {
     try {
-      const response = await fetch(`${API_URL}/api/products/${id}`);
+      const response = await fetch(`${API_BASE_URL}/api/products/${id}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -85,7 +95,7 @@ export const apiService = {
 
   async getCategories(): Promise<string[]> {
     try {
-      const response = await fetch(`${API_URL}/api/categories`);
+      const response = await fetch(`${API_BASE_URL}/api/categories`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -106,7 +116,7 @@ export const apiService = {
 
   async searchProducts(query: string): Promise<Product[]> {
     try {
-      const response = await fetch(`${API_URL}/api/products/search/${query}`);
+      const response = await fetch(`${API_BASE_URL}/api/products/search/${query}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

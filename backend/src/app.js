@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const { supabase } = require('./src/config/supabase');
+const { supabase } = require('./config/supabase');
 
 const app = express();
 
 // Configuration CORS détaillée
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:3000'],
+  origin: ['https://rifmabeauty.vercel.app','http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:3000'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -309,7 +309,7 @@ app.post('/api/orders', async (req, res) => {
 
     // 8. Envoyer les emails (si le service email est configuré)
     try {
-      const emailService = require('./src/services/emailService');
+      const emailService = require('./services/emailService');
       await emailService.sendOrderNotification(order);
       await emailService.sendOrderConfirmation(order);
       console.log(`📧 Emails envoyés pour la commande #${order.order_number}`);

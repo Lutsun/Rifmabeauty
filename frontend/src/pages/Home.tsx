@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronRight } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { apiService, Product } from '../services/apiService'; // Chemin corrigé
+import { useCart } from '../components/CartContext';
 
 interface HomeProps {
   onNavigate: (page: string, productId?: string) => void;
@@ -11,6 +12,8 @@ export default function Home({ onNavigate }: HomeProps) {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { addToCart } = useCart();
+  
 
   useEffect(() => {
     fetchFeaturedProducts();
@@ -33,13 +36,15 @@ export default function Home({ onNavigate }: HomeProps) {
     }
   };
 
+  
+
   return (
     <div className="min-h-screen">
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: 'url(/assets/images/RBHome.JPG)',
+            backgroundImage: 'url(https://ucliznuennmgiyjsxgrk.supabase.co/storage/v1/object/public/images/RBHome.JPG)',
             backgroundPosition: 'center 15%',
           }}
         >
@@ -113,6 +118,7 @@ export default function Home({ onNavigate }: HomeProps) {
                     key={product.id}
                     product={product}
                     onProductClick={(id) => onNavigate('product', id)}
+                    onAddToCart={() => addToCart(product)}
                   />
                 ))}
               </div>

@@ -1,6 +1,6 @@
 // server.js - À la racine de backend/
 const app = require('./app');
-const { testConnection } = require('./src/config/supabase');
+const { testConnection } = require('./config/supabase');
 
 const PORT = process.env.PORT || 5000;
 

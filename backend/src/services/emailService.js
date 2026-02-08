@@ -190,6 +190,7 @@ class EmailService {
               <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleString('fr-FR')}</p>
               <p><strong>Total:</strong> ${order.total_amount.toLocaleString()} FCFA</p>
               <p><strong>Paiement:</strong> À la livraison</p>
+              <p><strong>Livraison estimée:</strong> 1-2 jours ouvrables</p>
               <p><strong>Statut:</strong> <span style="color: #e91e63;">${order.status}</span></p>
             </div>
             
@@ -224,7 +225,7 @@ class EmailService {
                 </tr>
                 <tr style="font-weight: bold;">
                   <td colspan="3" style="padding: 12px; text-align: right;">Livraison:</td>
-                  <td style="padding: 12px; text-align: right;">${order.shipping_fee.toLocaleString()} FCFA</td>
+                  <td style="padding: 12px; text-align: right;">Tarif flexible selon la zone</td>
                 </tr>
                 <tr style="font-weight: bold; font-size: 18px;">
                   <td colspan="3" style="padding: 12px; text-align: right;">TOTAL:</td>
@@ -362,6 +363,7 @@ Client: ${order.customer_name} (${order.customer_email})
 Téléphone: ${order.customer_phone || 'Non fourni'}
 Total: ${order.total_amount} FCFA
 Paiement: À la livraison
+Livraison estimée: 1-2 jours ouvrables
 
 ARTICLES:
 ${order.items.map(item => `- ${item.name} x${item.quantity} = ${item.price * item.quantity} FCFA`).join('\n')}
@@ -724,9 +726,6 @@ generateWeeklyDigestHTML(email, name, newProducts) {
           <p style="margin: 0 0 10px; color: #666; font-size: 14px;">${product.description?.substring(0, 100)}${product.description?.length > 100 ? '...' : ''}</p>
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: bold; color: #e91e63;">${product.price.toLocaleString()} FCFA</span>
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products/${product.product_id}" style="background: #f8a5c2; color: white; padding: 6px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">
-              Voir
-            </a>
           </div>
         </div>
       </div>

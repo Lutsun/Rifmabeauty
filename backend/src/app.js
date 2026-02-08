@@ -6,7 +6,7 @@ const app = express();
 
 // Configuration CORS détaillée
 const corsOptions = {
-  origin: ['https://rifmabeauty-frontend.vercel.app','http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:3000'],
+  origin: ['https://rifmabeauty.com','https://www.rifmabeauty.com','https://rifmabeauty-frontend.vercel.app','http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:3000'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,

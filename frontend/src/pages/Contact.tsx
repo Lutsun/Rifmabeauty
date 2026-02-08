@@ -1,7 +1,10 @@
-import { Mail, MapPin, Phone, Instagram, Facebook, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Mail, MapPin, Phone, Instagram, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSnapchat, faTiktok } from '@fortawesome/free-brands-svg-icons';
 import { useState } from 'react';
+
+// URL de base de l'API
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rifmabeauty-backend.vercel.app';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -28,7 +31,7 @@ export default function Contact() {
     setSubmitStatus(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/contact', {
+      const response = await fetch(`${API_BASE_URL}/api/contact`, { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,7 +60,7 @@ export default function Contact() {
       console.error('🔥 Erreur fetch:', error);
       setSubmitStatus({ 
         type: 'error', 
-        message: 'Erreur de connexion au serveur. Vérifiez que le serveur backend est démarré.' 
+        message: 'Erreur de connexion. Veuillez réessayer plus tard.' // ← Message modifié
       });
     } finally {
       setIsSubmitting(false);
@@ -65,65 +68,64 @@ export default function Contact() {
   };
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(newsletterEmail)) {
-    setNewsletterStatus({
-      type: 'error',
-      message: 'Veuillez entrer une adresse email valide.'
-    });
-    return;
-  }
-
-  setIsNewsletterSubmitting(true);
-  setNewsletterStatus(null);
-
-  try {
-    // Appel unique à l'API qui gère tout
-    const response = await fetch('http://localhost:5000/api/newsletter/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email: newsletterEmail,
-        name: newsletterName || ''
-      }),
-    });
-
-    const data = await response.json();
+    e.preventDefault();
     
-    if (data.success) {
-      if (data.alreadySubscribed) {
-        setNewsletterStatus({
-          type: 'info',
-          message: '✅ Vous êtes déjà inscrit(e) à notre newsletter!'
-        });
-      } else {
-        setNewsletterStatus({
-          type: 'success',
-          message: '🎉 Merci pour votre inscription à notre newsletter!'
-        });
-      }
-      
-      setNewsletterEmail('');
-      setNewsletterName('');
-      
-      setTimeout(() => setNewsletterStatus(null), 5000);
-    } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newsletterEmail)) {
       setNewsletterStatus({
         type: 'error',
-        message: data.message || 'Erreur lors de l\'inscription.'
+        message: 'Veuillez entrer une adresse email valide.'
       });
+      return;
     }
-  } catch (error) {
-    setNewsletterStatus({
-      type: 'error',
-      message: '❌ Erreur de connexion. Réessayez plus tard.'
-    });
-  } finally {
-    setIsNewsletterSubmitting(false);
-  }
-};
+
+    setIsNewsletterSubmitting(true);
+    setNewsletterStatus(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/newsletter/subscribe`, { // ← MODIFIÉ
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: newsletterEmail,
+          name: newsletterName || ''
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        if (data.alreadySubscribed) {
+          setNewsletterStatus({
+            type: 'info',
+            message: '✅ Vous êtes déjà inscrit(e) à notre newsletter!'
+          });
+        } else {
+          setNewsletterStatus({
+            type: 'success',
+            message: '🎉 Merci pour votre inscription à notre newsletter!'
+          });
+        }
+        
+        setNewsletterEmail('');
+        setNewsletterName('');
+        
+        setTimeout(() => setNewsletterStatus(null), 5000);
+      } else {
+        setNewsletterStatus({
+          type: 'error',
+          message: data.message || 'Erreur lors de l\'inscription.'
+        });
+      }
+    } catch (error) {
+      setNewsletterStatus({
+        type: 'error',
+        message: '❌ Erreur de connexion. Réessayez plus tard.'
+      });
+    } finally {
+      setIsNewsletterSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pt-20 bg-white">

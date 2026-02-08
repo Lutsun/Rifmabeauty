@@ -174,7 +174,6 @@ class EmailService {
           .order-items th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; }
           .customer-info { background: #fff8f8; border-left: 4px solid #e91e63; padding: 20px; margin: 20px 0; }
           .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
-          .button { display: inline-block; background: #e91e63; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
         </style>
       </head>
       <body>
@@ -225,7 +224,7 @@ class EmailService {
                 </tr>
                 <tr style="font-weight: bold;">
                   <td colspan="3" style="padding: 12px; text-align: right;">Livraison:</td>
-                  <td style="padding: 12px; text-align: right;">${order.shipping_fee.toLocaleString()} FCFA</td>
+                  <td style="padding: 12px; text-align: right;">Tarif flexible selon la zone</td>
                 </tr>
                 <tr style="font-weight: bold; font-size: 18px;">
                   <td colspan="3" style="padding: 12px; text-align: right;">TOTAL:</td>
@@ -233,12 +232,6 @@ class EmailService {
                 </tr>
               </tbody>
             </table>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.ADMIN_URL || 'http://localhost:3000/admin'}" class="button">
-                👁️ Voir dans l'admin
-              </a>
-            </div>
           </div>
           
           <div class="footer">
@@ -287,7 +280,7 @@ class EmailService {
               <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleString('fr-FR')}</p>
               <p><strong>Total:</strong> ${order.total_amount.toLocaleString()} FCFA</p>
               <p><strong>Mode de paiement:</strong> Paiement à la livraison</p>
-              <p><strong>Livraison estimée:</strong> 2-3 jours ouvrables</p>
+              <p><strong>Livraison estimée:</strong> 1-2 jours ouvrables</p>
             </div>
             
             <div style="background: #fff8f8; padding: 20px; border-radius: 10px; margin: 20px 0;">
@@ -399,7 +392,7 @@ DÉTAILS DE LA COMMANDE:
 - Date: ${new Date(order.created_at).toLocaleString('fr-FR')}
 - Total: ${order.total_amount} FCFA
 - Paiement: À la livraison
-- Livraison estimée: 2-3 jours ouvrables
+- Livraison estimée: 1-2 jours ouvrables
 
 Pour suivre votre commande ou toute question:
 📧 Email: contact@rifmabeauty.com
@@ -805,9 +798,9 @@ generateWeeklyDigestHTML(email, name, newProducts) {
           
           <div class="social-icons">
             <p>Suivez-nous pour plus de conseils :</p>
-            <a href="https://instagram.com/rifmabeauty">📸 Instagram</a>
-            <a href="https://facebook.com/rifmabeauty">👍 Facebook</a>
-            <a href="https://tiktok.com/@rifmabeauty">🎵 TikTok</a>
+            <a href="https://www.instagram.com/rifma_beauty/">📸 Instagram</a>
+            <a href="https://www.snapchat.com/add/rifma_beauty">👻 Snapchat</a>
+            <a href="https://www.tiktok.com/@rifma.beauty">🎵 TikTok</a>
           </div>
         </div>
         
@@ -905,9 +898,9 @@ Code : SEMAINE${weekNumber}
 ${process.env.FRONTEND_URL || 'http://localhost:5173'}/products
 
 Suivez-nous :
-📸 Instagram : https://instagram.com/rifmabeauty
-👍 Facebook : https://facebook.com/rifmabeauty
-🎵 TikTok : https://tiktok.com/@rifmabeauty
+📸 Instagram : https://www.instagram.com/rifma_beauty/
+👻 Snapchat : https://www.snapchat.com/add/rifma_beauty
+🎵 TikTok : https://www.tiktok.com/@rifma.beauty
 
 Merci de faire partie de la famille RIFMA Beauty 💕
 
@@ -1116,8 +1109,5 @@ L'équipe 💄
 }
 
 }
-
-
-
 
 module.exports = new EmailService();

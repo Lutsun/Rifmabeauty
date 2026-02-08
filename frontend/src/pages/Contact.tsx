@@ -1,4 +1,6 @@
 import { Mail, MapPin, Phone, Instagram, Facebook, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSnapchat, faTiktok } from '@fortawesome/free-brands-svg-icons';
 import { useState } from 'react';
 
 export default function Contact() {
@@ -311,7 +313,7 @@ export default function Contact() {
                 </h3>
                 <div className="flex space-x-4">
                   <a
-                    href="https://instagram.com/rifmabeauty"
+                    href="https://www.instagram.com/rifma_beauty/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-12 h-12 bg-stone-100 hover:bg-rose-100 rounded-full flex items-center justify-center transition-colors group"
@@ -319,18 +321,20 @@ export default function Contact() {
                     <Instagram className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
                   </a>
                   <a
-                    href="https://facebook.com/rifmabeauty"
+                    href="https://www.snapchat.com/add/rifma_beauty"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-12 h-12 bg-stone-100 hover:bg-rose-100 rounded-full flex items-center justify-center transition-colors group"
                   >
-                    <Facebook className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
+                    <FontAwesomeIcon icon={faSnapchat} className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
                   </a>
                   <a
-                    href="mailto:contact@rifmabeauty.com"
+                    href="https://www.tiktok.com/@rifma.beauty"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-12 h-12 bg-stone-100 hover:bg-rose-100 rounded-full flex items-center justify-center transition-colors group"
                   >
-                    <Mail className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
+                    <FontAwesomeIcon icon={faTiktok} className="w-5 h-5 text-gray-600 group-hover:text-rose-600 transition-colors" />
                   </a>
                 </div>
               </div>
@@ -420,25 +424,25 @@ export default function Contact() {
       </section>
 
       <section className="py-16 bg-stone-50">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="bg-white p-8 md:p-12 text-center space-y-6">
-      <h2 className="text-3xl font-light tracking-wide text-gray-900">
-        Horaires d'ouverture
-      </h2>
-      <div className="max-w-md mx-auto space-y-3 text-gray-600 font-light">
-        <div className="flex justify-between">
-          <span>Lundi - Dimanche</span>
-          <span>7j/7 - 24h/24</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white p-8 md:p-12 text-center space-y-6">
+            <h2 className="text-3xl font-light tracking-wide text-gray-900">
+              Horaires d'ouverture
+            </h2>
+            <div className="max-w-md mx-auto space-y-3 text-gray-600 font-light">
+              <div className="flex justify-between">
+                <span>Lundi - Dimanche</span>
+                <span>7j/7 - 24h/24</span>
+              </div>
+              <div className="pt-4 mt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-500 italic">
+                  Boutique en ligne accessible 24h/24 - 7j/7
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="pt-4 mt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-500 italic">
-            Boutique en ligne accessible 24h/24 - 7j/7
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+      </section>
     </div>
   );
 }

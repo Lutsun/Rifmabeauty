@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useCart } from '../components/CartContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Truck, Shield, CreditCard } from 'lucide-react'; // Ajout de Shield et CreditCard
 
 // Ajoutez l'interface pour les props
 interface CheckoutPageProps {
@@ -170,14 +170,13 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
   return (
     <div className="min-h-screen pt-20 bg-stone-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Bouton Retour avec l'icône Truck pour plus de cohérence */}
         <div className="mb-8">
           <button
             onClick={() => onNavigate ? onNavigate('shop') : window.history.back()}
             className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 group"
           >
-            <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
+            <Truck className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm font-light tracking-wide">Retour à la boutique</span>
           </button>
         </div>
@@ -281,14 +280,13 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                   
                   <div>
                     <label className="block text-sm font-light text-gray-700 mb-2">
-                      Code postal *
+                      Code postal
                     </label>
                     <input
                       type="text"
                       name="zipCode"
                       value={formData.zipCode}
                       onChange={handleInputChange}
-                      required
                       className="w-full px-4 py-3 border border-gray-300 focus:border-black focus:outline-none transition-colors"
                       placeholder="12500"
                     />
@@ -377,8 +375,8 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Livraison</span>
-                  <span className="font-light text-green-600">
-                    {shippingFee === 0 ? 'Gratuite' : `${shippingFee} FCFA`}
+                  <span className="font-light text-green-600 flex items-center gap-1">
+                    Tarif flexible selon votre zone - Nous consulter
                   </span>
                 </div>
                 
@@ -389,22 +387,77 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
               </div>
             </div>
             
-            <div className="bg-stone-50 p-6 space-y-4">
-              <h3 className="text-sm font-light tracking-wider uppercase text-gray-900">
-                Paiement à la livraison
-              </h3>
-              <p className="text-sm text-gray-600">
-                Vous paierez votre commande en espèces lors de la livraison. Notre livreur vous contactera pour confirmer l'heure de livraison.
-              </p>
-            </div>
-            
-            <div className="bg-stone-50 p-6 space-y-4">
-              <h3 className="text-sm font-light tracking-wider uppercase text-gray-900">
-                Livraison gratuite
-              </h3>
-              <p className="text-sm text-gray-600">
-                Livraison offerte sur toute la région de Dakar. Délai de livraison: 2-3 jours ouvrables.
-              </p>
+            {/* Section Paiement améliorée - Complétée pour correspondre à ProductDetail */}
+            <div className="border-t border-gray-200 pt-8 space-y-6">
+              <div className="flex items-start space-x-4">
+                <Truck className="w-6 h-6 text-gray-500 mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="text-xl font-light tracking-wider text-gray-900 mb-1">
+                    Paiement à la livraison
+                  </h3>
+                  <p className="text-gray-600 text-sm font-light mb-4">
+                    Payez directement à la réception de votre commande en toute sécurité
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <Shield className="w-6 h-6 text-gray-500 mt-1 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-lg font-light tracking-wide text-gray-900 mb-3">
+                      Moyens de paiement acceptés
+                    </h4>
+                    <p className="text-gray-600 text-sm font-light mb-4">
+                      Vous pouvez régler votre commande avec :
+                    </p>
+                    
+                    {/* Icônes de paiement */}
+                    <div className="flex flex-wrap gap-4 items-center mt-4">
+                      {/* Wave */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-[#00B2A9] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-sm tracking-wide">WAVE</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Mobile Money</span>
+                      </div>
+                      
+                      {/* Orange Money */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-[#FF6600] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-xs tracking-wide">ORANGE</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Mobile Money</span>
+                      </div>
+                      
+                      {/* Visa */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-gradient-to-r from-[#1A1F71] to-[#2A3284] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-xl tracking-tighter">VISA</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Carte bancaire</span>
+                      </div>
+                      
+                      {/* Mastercard */}
+                      <div className="flex flex-col items-center group">
+                        <div className="w-16 h-10 bg-gradient-to-r from-[#EB001B] to-[#FF5F00] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
+                          <span className="text-white font-bold text-sm tracking-wide">Mastercard</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-light">Carte bancaire</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Message d'information */}
+              <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 mt-6">
+                <p className="text-sm text-gray-700 font-light">
+                  <span className="font-medium text-rose-700">💡 Bon à savoir : </span>
+                  Vous pouvez également payer en espèces si vous le souhaitez. 
+                  Notre livreur vous apportera votre commande avec une machine de paiement mobile.
+                </p>
+              </div>
             </div>
           </div>
         </div>

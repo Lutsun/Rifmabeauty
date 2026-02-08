@@ -7,6 +7,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  define: {
+    'process.env': process.env
+  },
   server: {
     host: '0.0.0.0',
     open: true,

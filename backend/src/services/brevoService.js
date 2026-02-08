@@ -45,7 +45,7 @@ async sendEmail({ to, subject, html, text, replyTo }) {
     }
     
     // EXTRACTION DE L'EMAIL (nouveau code)
-    let fromEmail = process.env.EMAIL_FROM;
+    let fromEmail = process.env.EMAIL_FROM || 'contact@rifmabeauty.com';
     let fromName = process.env.EMAIL_NAME || 'RIFMA Beauty';
     
     // Si le format est "Nom <email@domaine.com>", extraire seulement l'email

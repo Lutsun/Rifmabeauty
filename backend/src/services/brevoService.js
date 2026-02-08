@@ -31,12 +31,9 @@ async sendEmail({ to, subject, html, text, replyTo }) {
   try {
     console.log('📤 ENVOI EMAIL Brevo ======================');
     console.log('Destinataire:', to);
-    console.log('Sujet:', subject);
     
-    // Mode simulation si pas de clé API
     if (this.simulationMode) {
       console.log('📧 [DEV] Email simulé vers:', to);
-      console.log('📨 Email simulé avec succès');
       return { 
         success: true, 
         messageId: 'simulated-' + Date.now(),
@@ -44,24 +41,17 @@ async sendEmail({ to, subject, html, text, replyTo }) {
       };
     }
     
-    // EXTRACTION DE L'EMAIL (nouveau code)
+    // Vérification stricte de l'expéditeur
     let fromEmail = process.env.EMAIL_FROM || 'contact@rifmabeauty.com';
     let fromName = process.env.EMAIL_NAME || 'RIFMA Beauty';
     
-    // Si le format est "Nom <email@domaine.com>", extraire seulement l'email
-    const emailMatch = fromEmail.match(/<([^>]+)>/);
-    if (emailMatch) {
-      fromEmail = emailMatch[1]; // Prend seulement l'email entre <>
-    }
+    // Nettoyer l'email (enlever les chevrons si présents)
+    fromEmail = fromEmail.replace(/.*<([^>]+)>.*/, '$1').trim();
     
-    // Vérification que c'est un email valide
-    if (!fromEmail || !fromEmail.includes('@')) {
-      console.error('❌ EMAIL_FROM invalide:', process.env.EMAIL_FROM);
-      throw new Error('EMAIL_FROM doit être un email valide (ex: sergedasylva0411@gmail.com)');
+    // Vérifier que c'est un email vérifié dans Brevo
+    if (!fromEmail.includes('@rifmabeauty.com') && !fromEmail.includes('@brevo.com')) {
+      console.warn('⚠️ Email expéditeur non vérifié dans Brevo');
     }
-    
-    console.log('📧 Email expéditeur:', fromEmail);
-    console.log('📧 Nom expéditeur:', fromName);
     
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
     
@@ -69,10 +59,10 @@ async sendEmail({ to, subject, html, text, replyTo }) {
     sendSmtpEmail.htmlContent = html;
     sendSmtpEmail.textContent = text;
     
-    // CONFIGURATION CORRECTE DE L'EXPÉDITEUR
+    // IMPORTANT : Utiliser un sender vérifié dans Brevo
     sendSmtpEmail.sender = {
       name: fromName,
-      email: fromEmail  // Email vérifié dans Brevo
+      email: fromEmail
     };
     
     sendSmtpEmail.to = [{ email: to }];
@@ -84,18 +74,29 @@ async sendEmail({ to, subject, html, text, replyTo }) {
       };
     }
     
-    // Ajoutez des headers DKIM/DMARC (important sans domaine)
+    // Ajouter des headers pour améliorer la délivrabilité
     sendSmtpEmail.headers = {
-      'List-Unsubscribe': '<mailto:unsubscribe@brevo.com>',
-      'X-Report-Abuse': 'Please report abuse to <mailto:contact@brevo.com>',
-      'X-Mailer': 'Brevo-API'
+      'X-Mailer': 'Brevo-API-Node',
+      'List-Unsubscribe': `<mailto:${fromEmail}?subject=unsubscribe>`,
+      'X-Report-Abuse': `Please report abuse to <mailto:${fromEmail}>`,
+      'X-Sender-Domain': 'rifmabeauty.com'
     };
     
-    console.log('📧 Envoi en cours via Brevo...');
+    // Paramètres SMTP supplémentaires
+    sendSmtpEmail.params = {
+      'email_service': 'brevo',
+      'domain': 'rifmabeauty.com'
+    };
+    
+    console.log('📧 Configuration:', {
+      from: sendSmtpEmail.sender,
+      to: sendSmtpEmail.to,
+      subject: sendSmtpEmail.subject.substring(0, 50) + '...'
+    });
+    
     const data = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
     
-    console.log('📨 Réponse Brevo:', data.messageId);
-    console.log('✅ Email envoyé avec succès via Brevo');
+    console.log('✅ Email envoyé avec succès:', data.messageId);
     
     return {
       success: true,
@@ -104,17 +105,25 @@ async sendEmail({ to, subject, html, text, replyTo }) {
     };
     
   } catch (error) {
-    console.error('❌ ERREUR Brevo:', error.message);
-    console.error('Détails:', error.response?.body || error);
+    console.error('❌ ERREUR Brevo détaillée:');
+    console.error('Message:', error.message);
+    console.error('Code:', error.code);
+    console.error('Response:', error.response?.body);
     
-    // Pour les erreurs spécifiques
-    if (error.message.includes('valid sender email') || error.message.includes('invalid_parameter')) {
-      console.error('⚠️ SOLUTION RAPIDE :');
-      console.error('1. Connectez-vous à Brevo');
-      console.error('2. Allez dans SMTP & API → Senders');
-      console.error('3. Ajoutez "sergedasylva0411@gmail.com" comme sender');
-      console.error('4. Vérifiez-le via l\'email de confirmation');
-      console.error('5. Redémarrez votre serveur');
+    // Diagnostics spécifiques
+    if (error.response?.body) {
+      const body = error.response.body;
+      console.error('🔍 Diagnostic Brevo:');
+      
+      if (body.code === 'invalid_parameter') {
+        console.error('➡️ Problème: Paramètre invalide');
+        console.error('➡️ Solution: Vérifiez que contact@rifmabeauty.com est un sender vérifié dans Brevo');
+      }
+      
+      if (body.code === 'unauthorized') {
+        console.error('➡️ Problème: Clé API invalide');
+        console.error('➡️ Solution: Regénérez votre clé API dans Brevo');
+      }
     }
     
     return {
@@ -124,7 +133,8 @@ async sendEmail({ to, subject, html, text, replyTo }) {
       simulated: false
     };
   }
-}
+} 
+
 }
 
 module.exports = new BrevoService();

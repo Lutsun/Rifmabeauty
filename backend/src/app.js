@@ -227,16 +227,42 @@ if (featured !== undefined) {
 
 app.get('/api/products/:id', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('product_id', req.params.id)
-      .single();
+    const { id } = req.params;
+    console.log(`🔍 Recherche produit avec ID: ${id} (longueur: ${id.length})`);
     
-    if (error) throw error;
-    if (!data) {
-      return res.status(404).json({ success: false, message: 'Produit non trouvé' });
+    let query = supabase.from('products').select('*');
+    
+    // Déterminer si c'est un UUID ou un product_id
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    if (isUuid) {
+      console.log('🔑 Recherche par UUID (colonne id)');
+      query = query.eq('id', id);
+    } else {
+      console.log('🔑 Recherche par product_id');
+      query = query.eq('product_id', id);
     }
+    
+    // Utiliser maybeSingle() au lieu de single() pour éviter l'erreur
+    const { data, error } = await query.maybeSingle();
+    
+    if (error) {
+      console.error('❌ Erreur recherche produit:', error.message);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erreur base de données: ' + error.message
+      });
+    }
+    
+    if (!data) {
+      console.log('❌ Produit non trouvé avec ID:', id);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Produit non trouvé' 
+      });
+    }
+    
+    console.log(`✅ Produit trouvé: ${data.name} (ID: ${data.id})`);
     
     res.json({
       success: true,
@@ -256,7 +282,12 @@ app.get('/api/products/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('🔥 Erreur dans /api/products/:id:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur serveur: ' + error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -978,13 +1009,20 @@ app.get('/api/products/search/:query', async (req, res) => {
       .or(`name.ilike.%${query}%,description.ilike.%${query}%,shade.ilike.%${query}%`)
       .order('name');
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Erreur recherche:', error.message);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erreur recherche: ' + error.message 
+      });
+    }
 
     res.json({
       success: true,
-      count: data.length,
-      data: data.map(p => ({
-        id: p.product_id,
+      count: data?.length || 0,
+      data: (data || []).map(p => ({
+        id: p.id, // <-- Ajouter l'UUID
+        productId: p.product_id, // <-- Ajouter product_id
         name: p.name,
         category: p.category,
         price: p.price,
@@ -992,11 +1030,16 @@ app.get('/api/products/search/:query', async (req, res) => {
         description: p.description,
         shade: p.shade,
         stock: p.stock,
-        featured: p.featured
+        featured: p.featured,
+        inStock: p.in_stock
       }))
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('🔥 Erreur recherche produits:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 });
 

@@ -84,28 +84,31 @@ export const apiService = {
   },
 
   async getProductById(id: string): Promise<Product | null> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/products/${id}`);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        return data.data;
-      } else {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
         return null;
       }
-    } catch (error) {
-      console.error('Error fetching product:', error);
-      throw error;
+      const errorText = await response.text();
+      console.error('❌ Erreur détaillée:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  },
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data;
+    } else {
+      console.error('❌ API returned success: false:', data.message);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    throw error;
+  }
+ },
 
   async getCategories(): Promise<string[]> {
     try {

@@ -200,7 +200,8 @@ if (featured !== undefined) {
       success: true,
       count: data.length,
       data: data.map(p => ({
-        id: p.product_id,
+        id: p.id,
+        productId: p.product_id,
         name: p.name,
         category: p.category,
         price: p.price,
@@ -240,7 +241,8 @@ app.get('/api/products/:id', async (req, res) => {
     res.json({
       success: true,
       data: {
-        id: data.product_id,
+        id: data.id,
+        productId: data.product_id,
         name: data.name,
         category: data.category,
         price: data.price,
@@ -313,8 +315,8 @@ app.post('/api/orders', async (req, res) => {
     for (const item of items) {
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('stock, name')
-        .eq('product_id', item.productId)
+        .select('stock, name, product_id')
+        .eq('id', item.id)
         .single();
       
       if (productError) {
@@ -372,11 +374,49 @@ app.post('/api/orders', async (req, res) => {
     if (error) throw error;
 
     // 6. Mettre à jour les stocks
-    for (const item of items) {
-      await supabase.rpc('decrement_stock', {
-        product_id: item.productId,
-        decrement_by: item.quantity
-      });
+    try {
+      console.log('📊 Début décrémentation stock pour', items.length, 'produits');
+      
+      for (const item of items) {
+        console.log(`📦 Décrémentation: ${item.name} -${item.quantity}`);
+        console.log('Item complet:', JSON.stringify(item, null, 2));
+        
+        // Si pas d'UUID, chercher le produit par productId
+        let productUuid = item.id;
+        
+        if (!productUuid || productUuid.length < 36) {
+          // Ce n'est pas un UUID, chercher l'UUID correspondant
+          console.log(`🔄 Recherche UUID pour productId: ${item.productId}`);
+          
+          const { data: product, error: findError } = await supabase
+            .from('products')
+            .select('id')
+            .eq('product_id', item.productId)
+            .single();
+          
+          if (findError || !product) {
+            console.error(`❌ Produit non trouvé: ${item.productId}`);
+            continue;
+          }
+          
+          productUuid = product.id;
+          console.log(`✅ UUID trouvé: ${productUuid}`);
+        }
+        
+        // Décrémenter le stock avec l'UUID
+        const { error } = await supabase.rpc('decrement_stock', {
+          product_uuid: productUuid,
+          decrement_by: item.quantity
+        });
+        
+        if (error) {
+          console.error(`❌ Erreur décrémentation pour ${item.name}:`, error);
+        } else {
+          console.log(`✅ Stock décrémenté pour ${item.name}`);
+        }
+      }
+    } catch (error) {
+      console.error('🔥 Erreur globale décrémentation stock:', error);
     }
 
     // 7. METTRE À JOUR LES STATS DU CLIENT

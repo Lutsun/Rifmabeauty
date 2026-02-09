@@ -3,6 +3,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export interface Product {
   id: string;
+  productId?: string;
   name: string;
   category: string;
   price: number;
@@ -59,7 +60,20 @@ export const apiService = {
       
       if (data.success) {
         console.log(`📦 ${data.data?.length || 0} produits récupérés`);
-        return data.data || [];
+        return data.data.map((p: { id: any; productId: any; name: any; category: any; price: any; image: any; description: any; shade: any; featured: any; stock: any; inStock: any; detailImage: any; }) => ({
+          id: p.id, // UUID - pour decrement_stock
+          productId: p.productId, // product_id - pour référence
+          name: p.name,
+          category: p.category,
+          price: p.price,
+          image: p.image,
+          description: p.description,
+          shade: p.shade,
+          featured: p.featured,
+          stock: p.stock,
+          inStock: p.inStock,
+          detailImage: p.detailImage
+        })) || [];
       } else {
         throw new Error(data.message || 'Échec de récupération des produits');
       }

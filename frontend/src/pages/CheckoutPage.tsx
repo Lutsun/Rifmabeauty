@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useCart } from '../components/CartContext';
-import { Loader2, Truck, Shield, CreditCard } from 'lucide-react'; // Ajout de Shield et CreditCard
+import { Loader2, Truck, Shield } from 'lucide-react'; // Ajout de Shield et CreditCard
 
 // Ajoutez l'interface pour les props
 interface CheckoutPageProps {
@@ -53,13 +53,15 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
       };
 
       const orderItems = items.map(item => ({
-        productId: item.id,
+        id: item.id, // UUID - pour decrement_stock
+        productId: item.productId,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
         image: item.image,
         shade: item.shade
       }));
+      
 
       const orderPayload = {
         customer_email: formData.email,

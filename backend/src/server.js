@@ -56,6 +56,7 @@ async function startServer() {
       console.log(`   curl http://localhost:${PORT}/api/products/1`);
       console.log('='.repeat(50) + '\n');
     });
+
     
     // Gestion propre de l'arrêt
     process.on('SIGINT', () => {

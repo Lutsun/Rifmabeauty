@@ -8,22 +8,93 @@ class EmailService {
   }
 
   createService() {
-    const serviceType = process.env.EMAIL_SERVICE || 'brevo';
-    
-    switch(serviceType) {
-      case 'resend':
-        return require('./resendService');
-      case 'brevo':
-        return require('./brevoService');
-      default:
-        console.warn('⚠️ Service email non configuré, mode simulation activé');
-        return require('./mockEmailService');
+    try {
+      console.log('🔍 Configuration email service...');
+      console.log('📋 EMAIL_SERVICE:', process.env.EMAIL_SERVICE || 'NON DÉFINI');
+      console.log('📋 OWNER_EMAIL:', process.env.OWNER_EMAIL || 'NON DÉFINI');
+      console.log('📋 NODE_ENV:', process.env.NODE_ENV || 'development');
+      
+      const serviceType = (process.env.EMAIL_SERVICE || 'mock').toLowerCase();
+      
+      switch(serviceType) {
+        case 'resend':
+          console.log('📧 Tentative de chargement Resend...');
+          return this.loadServiceSafely('./resendService', 'Resend');
+          
+        case 'brevo':
+          console.log('📧 Tentative de chargement Brevo...');
+          return this.loadServiceSafely('./brevoService', 'Brevo');
+          
+        case 'mock':
+        default:
+          console.log('📧 Mode simulation activé');
+          return this.loadServiceSafely('./mockEmailService', 'Mock');
+      }
+    } catch (error) {
+      console.error('❌ Erreur création service email:', error.message);
+      console.log('🔄 Utilisation du service mock de secours...');
+      return this.createFallbackService();
     }
   }
 
-  // Envoyer une notification de nouvelle commande
-  async sendOrderNotification(order, ownerEmail = null) {
+  loadServiceSafely(servicePath, serviceName) {
     try {
+      console.log(`🔄 Chargement ${serviceName}...`);
+      const service = require(servicePath);
+      
+      // Vérifier que le service a bien la méthode sendEmail
+      if (typeof service.sendEmail !== 'function') {
+        throw new Error(`Le service ${serviceName} n'a pas de méthode sendEmail`);
+      }
+      
+      console.log(`✅ ${serviceName} chargé avec succès`);
+      return service;
+      
+    } catch (error) {
+      console.error(`❌ Erreur chargement ${serviceName}:`, error.message);
+      
+      // Si c'est le mock qui échoue, créer un fallback basique
+      if (serviceName === 'Mock') {
+        console.log('🔄 Création fallback mock...');
+        return this.createFallbackService();
+      }
+      
+      // Pour Brevo/Resend qui échouent, essayer le mock
+      console.log(`🔄 ${serviceName} non disponible, tentative avec mock...`);
+      try {
+        return require('./mockEmailService');
+      } catch (mockError) {
+        console.error('❌ Mock aussi en échec, création fallback...');
+        return this.createFallbackService();
+      }
+    }
+  }
+
+  // Service de secours ultra basique
+  createFallbackService() {
+    console.log('🛡️ Création service fallback...');
+    return {
+      sendEmail: async ({ to, subject, html, text, replyTo }) => {
+        console.log('📧 [FALLBACK] Email à:', to);
+        console.log('   Sujet:', subject);
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        return {
+          success: true,
+          message: 'Email traité (mode fallback)',
+          simulated: true,
+          warning: 'Service email non disponible, email simulé'
+        };
+      }
+    };
+  }
+
+  // Envoyer une notification de nouvelle commande
+   async sendOrderNotification(order, ownerEmail = null) {
+    try {
+      console.log(`📦 Notification commande #${order.order_number}`);
+      
       const email = ownerEmail || process.env.OWNER_EMAIL || 'contact@rifmabeauty.com';
       
       const html = this.generateOrderEmailHTML(order);
@@ -37,17 +108,30 @@ class EmailService {
         replyTo: order.customer_email
       });
       
-      console.log(`📧 Email commande envoyé à: ${email}`);
+      console.log(`✅ Email commande envoyé à: ${email}`);
+      
+      // Si c'était simulé, logger un warning
+      if (result.simulated) {
+        console.warn(`⚠️ Email simulé pour ${email}. Configurez Brevo pour de vrais emails.`);
+      }
+      
       return result;
+      
     } catch (error) {
-      console.error('❌ Erreur envoi email commande:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Erreur envoi email commande:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        simulated: true
+      };
     }
   }
 
   // Envoyer une confirmation au client
   async sendOrderConfirmation(order) {
     try {
+      console.log(`📧 Confirmation commande #${order.order_number} à: ${order.customer_email}`);
+      
       const html = this.generateCustomerEmailHTML(order);
       const text = this.generateCustomerEmailText(order);
       
@@ -59,95 +143,110 @@ class EmailService {
         replyTo: process.env.OWNER_EMAIL
       });
       
-      console.log(`📧 Confirmation envoyée à: ${order.customer_email}`);
+      console.log(`✅ Confirmation envoyée à: ${order.customer_email}`);
+      
+      if (result.simulated) {
+        console.warn(`⚠️ Email simulé pour ${order.customer_email}`);
+      }
+      
       return result;
+      
     } catch (error) {
-      console.error('❌ Erreur envoi confirmation:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Erreur envoi confirmation:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        simulated: true
+      };
     }
   }
 
   // Envoyer un message de contact
-    async sendContactMessage(contactData) {
-  try {
-    const { name, email, phone, message } = contactData;
-    
-    console.log('📩 DEBUT sendContactMessage ===========');
-    
-    let allSuccess = true;
-    let errors = [];
-    
-    // 1. Email au propriétaire
+  async sendContactMessage(contactData) {
     try {
-      const ownerHtml = this.generateContactEmailHTML(contactData, 'owner');
-      const ownerResult = await this.service.sendEmail({
-        to: process.env.OWNER_EMAIL || 'sergedasylva0411@gmail.com',
-        subject: `📩 Nouveau message de ${name}`,
-        html: ownerHtml,
-        text: `Nouveau message de ${name} (${email}): ${message}`,
-        replyTo: email
-      });
+      const { name, email, phone, message } = contactData;
       
-      if (!ownerResult.success) {
+      console.log('📩 Nouveau message de contact de:', name);
+      
+      let allSuccess = true;
+      let errors = [];
+      
+      // 1. Email au propriétaire
+      try {
+        const ownerHtml = this.generateContactEmailHTML(contactData, 'owner');
+        const ownerResult = await this.service.sendEmail({
+          to: process.env.OWNER_EMAIL || 'sergedasylva0411@gmail.com',
+          subject: `📩 Nouveau message de ${name}`,
+          html: ownerHtml,
+          text: `Nouveau message de ${name} (${email}): ${message}`,
+          replyTo: email
+        });
+        
+        if (!ownerResult.success) {
+          allSuccess = false;
+          errors.push(`Propriétaire: ${ownerResult.error}`);
+        }
+        
+        console.log('📧 Email propriétaire:', ownerResult.success ? 'OK' : 'ÉCHEC');
+        if (ownerResult.simulated) {
+          console.warn('⚠️ Email au propriétaire simulé');
+        }
+        
+      } catch (ownerError) {
         allSuccess = false;
-        errors.push(`Propriétaire: ${ownerResult.error}`);
+        errors.push(`Propriétaire: ${ownerError.message}`);
+        console.error('❌ Erreur email propriétaire:', ownerError.message);
       }
-      console.log('📧 Email propriétaire:', ownerResult.success ? 'OK' : 'ÉCHEC');
       
-    } catch (ownerError) {
-      allSuccess = false;
-      errors.push(`Propriétaire: ${ownerError.message}`);
-      console.error('❌ Erreur email propriétaire:', ownerError.message);
-    }
-    
-    // 2. Accusé de réception au client
-    try {
-      const clientHtml = this.generateContactEmailHTML(contactData, 'client');
-      const clientResult = await this.service.sendEmail({
-        to: email,
-        subject: `✅ Message reçu - RIFMA Beauty`,
-        html: clientHtml,
-        text: `Merci pour votre message ${name}. Nous vous répondrons dans les 24h.`,
-        replyTo: process.env.OWNER_EMAIL
-      });
-      
-      if (!clientResult.success) {
+      // 2. Accusé de réception au client
+      try {
+        const clientHtml = this.generateContactEmailHTML(contactData, 'client');
+        const clientResult = await this.service.sendEmail({
+          to: email,
+          subject: `✅ Message reçu - RIFMA Beauty`,
+          html: clientHtml,
+          text: `Merci pour votre message ${name}. Nous vous répondrons dans les 24h.`,
+          replyTo: process.env.OWNER_EMAIL
+        });
+        
+        if (!clientResult.success) {
+          allSuccess = false;
+          errors.push(`Client: ${clientResult.error}`);
+        }
+        
+        console.log('📧 Email client:', clientResult.success ? 'OK' : 'ÉCHEC');
+        if (clientResult.simulated) {
+          console.warn('⚠️ Email client simulé');
+        }
+        
+      } catch (clientError) {
         allSuccess = false;
-        errors.push(`Client: ${clientResult.error}`);
+        errors.push(`Client: ${clientError.message}`);
+        console.error('❌ Erreur email client:', clientError.message);
       }
-      console.log('📧 Email client:', clientResult.success ? 'OK' : 'ÉCHEC');
       
-    } catch (clientError) {
-      allSuccess = false;
-      errors.push(`Client: ${clientError.message}`);
-      console.error('❌ Erreur email client:', clientError.message);
-    }
-    
-    // Si au moins un email a été envoyé (email au propriétaire), considérer comme succès
-    const ownerEmailSent = !errors.some(e => e.includes('Propriétaire'));
-    
-    if (ownerEmailSent) {
-      console.log('✅ sendContactMessage - Succès partiel (propriétaire notifié)');
-      return { 
-        success: true, 
-        warning: errors.length > 0 ? `Email client non envoyé: ${errors.join(', ')}` : undefined
-      };
-    } else {
-      console.log('❌ sendContactMessage - Échec complet');
+      // Retourner le résultat
+      if (allSuccess) {
+        return { 
+          success: true, 
+          message: 'Message traité avec succès'
+        };
+      } else {
+        return { 
+          success: errors.length < 2, // Si au moins un email a réussi
+          warning: errors.length > 0 ? `Problèmes: ${errors.join(', ')}` : undefined
+        };
+      }
+      
+    } catch (error) {
+      console.error('❌ ERREUR inattendue dans sendContactMessage:', error.message);
       return { 
         success: false, 
-        error: `Aucun email envoyé: ${errors.join(', ')}` 
+        error: error.message,
+        simulated: true
       };
     }
-    
-  } catch (error) {
-    console.error('❌ ERREUR inattendue dans sendContactMessage:', error.message);
-    return { 
-      success: false, 
-      error: error.message 
-    };
   }
-}
   // Générer le HTML pour le propriétaire
   generateOrderEmailHTML(order) {
     const itemsHTML = order.items.map(item => `

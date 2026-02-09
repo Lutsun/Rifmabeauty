@@ -4,7 +4,7 @@ import { faSnapchat, faTiktok } from '@fortawesome/free-brands-svg-icons';
 import { useState } from 'react';
 
 // URL de base de l'API
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rifmabeauty-backend.vercel.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.rifmabeauty.com';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -66,6 +66,7 @@ export default function Contact() {
       setIsSubmitting(false);
     }
   };
+
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -447,4 +448,5 @@ export default function Contact() {
       </section>
     </div>
   );
+  
 }

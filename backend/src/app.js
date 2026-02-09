@@ -6,12 +6,87 @@ const app = express();
 
 // Configuration CORS détaillée
 const corsOptions = {
-  origin: ['https://rifmabeauty.com','https://www.rifmabeauty.com','https://rifmabeauty-frontend.vercel.app','http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:3000'],
+  origin: ['https://rifmabeauty.com','https://www.rifmabeauty.com','https://rifmabeauty-frontend.vercel.app','https://api.rifmabeauty.com', 'https://rifmabeauty-backend.vercel.app','http://localhost:5173', 'http://localhost:5000', 'http://127.0.0.1:3000'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
   optionsSuccessStatus: 200
 };
+
+// Route de debug email service
+app.get('/api/debug-email-service', async (req, res) => {
+  console.log('🔍 Debug email service endpoint called');
+  
+  try {
+    // Test 1: Variables d'environnement
+    const env = {
+      EMAIL_SERVICE: process.env.EMAIL_SERVICE || 'NOT SET',
+      OWNER_EMAIL: process.env.OWNER_EMAIL || 'NOT SET',
+      BREVO_API_KEY: process.env.BREVO_API_KEY ? 'SET' : 'NOT SET',
+      NODE_ENV: process.env.NODE_ENV || 'development'
+    };
+    
+    console.log('📋 Environment:', env);
+    
+    // Test 2: Essayons de charger le service
+    console.log('🔄 Attempting to load emailService...');
+    let emailService;
+    try {
+      emailService = require('./services/emailService');
+      console.log('✅ emailService loaded successfully');
+    } catch (loadError) {
+      console.error('❌ Failed to load emailService:', loadError.message);
+      console.error('Stack:', loadError.stack);
+      
+      // Vérifier les fichiers
+      const fs = require('fs');
+      const path = require('path');
+      
+      const servicesPath = path.join(__dirname, 'services');
+      console.log('📁 Services path:', servicesPath);
+      console.log('📁 Exists?', fs.existsSync(servicesPath));
+      
+      if (fs.existsSync(servicesPath)) {
+        const files = fs.readdirSync(servicesPath);
+        console.log('📄 Files in services:', files);
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load emailService',
+        details: loadError.message,
+        env: env
+      });
+    }
+    
+    // Test 3: Tester sendContactMessage
+    console.log('🧪 Testing sendContactMessage...');
+    const testData = {
+      name: "Debug Test",
+      email: "debug@example.com",
+      phone: "+221 78 717 10 10",
+      message: "Test message from debug endpoint"
+    };
+    
+    const result = await emailService.sendContactMessage(testData);
+    
+    res.json({
+      success: true,
+      message: 'Email service test completed',
+      env: env,
+      testResult: result,
+      serviceType: emailService.service ? emailService.service.constructor.name : 'Unknown'
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
 
 // Appliquer CORS avant toutes les routes
 app.use(cors(corsOptions));
@@ -481,7 +556,7 @@ app.get('/api/admin/orders', async (req, res) => {
 // ROUTES EMAIL / CONTACT
 // ======================
 
-// Dans app.js, modifiez la route /api/contact
+// route api/contact
 app.post('/api/contact', async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
@@ -508,7 +583,7 @@ app.post('/api/contact', async (req, res) => {
     // Vérifier si le service email est disponible
     let emailService;
     try {
-      emailService = require('./src/services/emailService');
+      emailService = require('./services/emailService');
     } catch (err) {
       console.error('❌ Service email non trouvé:', err.message);
       return res.status(500).json({
@@ -556,6 +631,7 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
+
 // Route pour tester les emails (admin seulement)
 app.post('/api/test-email', async (req, res) => {
   try {
@@ -582,7 +658,7 @@ app.post('/api/test-email', async (req, res) => {
       notes: 'Commande de test'
     };
     
-    const emailService = require('./src/services/emailService');
+    const emailService = require('./services/emailService');
     
     // Envoyer au propriétaire
     await emailService.sendOrderNotification(testOrder);
@@ -625,6 +701,7 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
         message: 'Format email invalide'
       });
     }
+    
     
     // 1. VÉRIFIER D'ABORD si l'email existe déjà (approche plus robuste)
     let emailExists = false;
@@ -714,7 +791,7 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
     let emailResult = null;
     if (!emailExists) {
       try {
-        const emailService = require('./src/services/emailService');
+        const emailService = require('./services/emailService');
         emailResult = await emailService.sendNewsletterConfirmation(email, name);
         
         if (emailResult && emailResult.success) {
@@ -1070,7 +1147,7 @@ app.post('/api/admin/send-newsletter', async (req, res) => {
     
     console.log(`📧 Envoi newsletter à ${subscribers.length} abonnés...`);
     
-    const emailService = require('./src/services/emailService');
+    const emailService = require('./services/emailService');
     let sentCount = 0;
     
     // Envoyer en batch limité
@@ -1222,23 +1299,6 @@ app.post('/api/admin/test-weekly-email', async (req, res) => {
       });
     }
     
-    // Simuler des nouveaux produits
-    const testProducts = [
-      {
-        product_id: 'test-1',
-        name: 'Candy Rose Gloss',
-        price: 6000,
-        description: 'Un gloss brillant et confortable en teinte rose bonbon',
-        image_url: 'https://example.com/gloss.jpg'
-      },
-      {
-        product_id: 'test-2',
-        name: 'Lip Balm Hydratant',
-        price: 4500,
-        description: 'Baume à lèvres nourrissant à l\'argan',
-        image_url: 'https://example.com/balm.jpg'
-      }
-    ];
     
     const result = await emailService.sendWeeklyDigest(
       email,
@@ -1378,7 +1438,7 @@ async function sendProductNotificationToSubscribers(productData) {
     
     console.log(`📧 Envoi à ${subscribers.length} abonnés...`);
     
-    const emailService = require('./src/services/emailService');
+    const emailService = require('./services/emailService');
     let sentCount = 0;
     
     // Envoyer à chaque abonné (en batch pour éviter de surcharger)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ShoppingBag, Truck, Shield } from 'lucide-react';
-import { apiService, Product } from '../services/apiService'; 
+import { ChevronLeft, ShoppingBag, Truck, Shield, ChevronRight, ChevronLeft as ChevronLeftIcon } from 'lucide-react';
+import { apiService, Product } from '../services/apiService';
 import { useCart } from '../components/CartContext';
 
 interface ProductDetailProps {
@@ -13,6 +13,7 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -41,6 +42,43 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
       setError('Impossible de charger le produit');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Récupérer toutes les images disponibles pour le produit
+  const getProductImages = () => {
+    if (!product) return [];
+    
+    const images = [];
+    
+    // Ajouter l'image principale
+    if (product.image) {
+      images.push(product.image);
+    }
+    
+    // Ajouter l'image de détail si elle existe
+    if (product.detailImage) {
+      images.push(product.detailImage);
+    }
+    
+    return images;
+  };
+
+  const productImages = getProductImages();
+  
+  const nextImage = () => {
+    if (productImages.length > 1) {
+      setCurrentImageIndex((prevIndex) => 
+        prevIndex === productImages.length - 1 ? 0 : prevIndex + 1
+      );
+    }
+  };
+
+  const prevImage = () => {
+    if (productImages.length > 1) {
+      setCurrentImageIndex((prevIndex) => 
+        prevIndex === 0 ? productImages.length - 1 : prevIndex - 1
+      );
     }
   };
 
@@ -83,17 +121,90 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+          {/* Section Images avec Swipper */}
           <div className="space-y-4">
-            <div className="aspect-square bg-white overflow-hidden">
+            <div className="relative aspect-square bg-white overflow-hidden rounded-lg">
               <img
-                src={product.detailImage || product.image}
-                alt={product.name}
+                src={productImages[currentImageIndex] || '/assets/images/placeholder.jpg'}
+                alt={`${product.name} - Vue ${currentImageIndex + 1}`}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.src = '/assets/images/placeholder.jpg';
                 }}
               />
+              
+              {/* Boutons de navigation pour swipper */}
+              {productImages.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                    aria-label="Image précédente"
+                  >
+                    <ChevronLeftIcon className="w-6 h-6 text-gray-800" />
+                  </button>
+                  
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                    aria-label="Image suivante"
+                  >
+                    <ChevronRight className="w-6 h-6 text-gray-800" />
+                  </button>
+                  
+                  {/* Indicateurs de position */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                    {productImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                          index === currentImageIndex 
+                            ? 'bg-rose-600 w-4' 
+                            : 'bg-white/60 hover:bg-white'
+                        }`}
+                        aria-label={`Aller à l'image ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+            
+            {/* Miniatures des images */}
+            {productImages.length > 1 && (
+              <div className="flex space-x-4 justify-center pt-4">
+                {productImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-20 h-20 overflow-hidden rounded-lg border-2 transition-all duration-300 hover:opacity-100 ${
+                      index === currentImageIndex 
+                        ? 'border-rose-600 opacity-100' 
+                        : 'border-transparent opacity-60 hover:border-gray-300'
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`Miniature ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = '/assets/images/placeholder.jpg';
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* Légendes pour les images */}
+            {productImages.length > 1 && (
+              <div className="text-center pt-2">
+                <p className="text-sm text-gray-600 font-light">
+                  {currentImageIndex === 0 ? 'Packaging du produit' : 'Produit en détail'}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-8">
@@ -219,7 +330,10 @@ export default function ProductDetail({ productId, onNavigate }: ProductDetailPr
                 <div
                   key={relatedProduct.id}
                   className="cursor-pointer group"
-                  onClick={() => onNavigate('product', relatedProduct.id)}
+                  onClick={() => {
+                    setCurrentImageIndex(0); // Réinitialiser l'index d'image quand on change de produit
+                    onNavigate('product', relatedProduct.id);
+                  }}
                 >
                   <div className="relative overflow-hidden bg-stone-100 aspect-square mb-4">
                     <img

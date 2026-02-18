@@ -208,7 +208,7 @@ class WeeklyNewsletter {
               
               <!-- BOUTON -->
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL || 'https://rifmabeauty.com'}/products" 
+                <a href="${process.env.VITE_API_URL || 'https://rifmabeauty.com'}/products" 
                    style="display: inline-block; background: #000; color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold;">
                   🛍️ DÉCOUVRIR LA BOUTIQUE
                 </a>
@@ -219,7 +219,7 @@ class WeeklyNewsletter {
             <div style="background: #f8f9fa; padding: 25px; text-align: center; color: #666; font-size: 13px; border-top: 1px solid #eee;">
               <p>RIFMA Beauty - Dakar, Sénégal</p>
               <p>📧 contact@rifmabeauty.com | 📱 +221 78 717 10 10</p>
-              <p><a href="${process.env.BACKEND_URL || 'https://api.rifmabeauty.com'}/api/newsletter/unsubscribe?email=[email]" style="color: #999;">Se désinscrire</a></p>
+              <p><a href="${process.env.VITE_API_URL || 'https://api.rifmabeauty.com'}/api/newsletter/unsubscribe?email=[email]" style="color: #999;">Se désinscrire</a></p>
             </div>
           </div>
         `
@@ -417,9 +417,7 @@ class WeeklyNewsletter {
       "Un gommage doux une fois par semaine pour une peau éclatante",
       "Appliquez votre crème de jour du bout des doigts pour activer la microcirculation",
       "Le sérum visage s'applique toujours avant la crème hydratante",
-      "Nettoyez vos pinceaux de maquillage une fois par semaine",
       "Buvez assez d'eau pour une peau hydratée de l'intérieur",
-      "Protégez vos cheveux de la chaleur avant d'utiliser un fer à lisser",
       "Le contour des yeux mérite une attention particulière quotidienne",
       "Exfoliez vos lèvres avec un gommage doux pour un rouge à lèvres parfait",
       "L'huile végétale est parfaite pour démaquiller en douceur",

@@ -169,7 +169,7 @@ app.get('/api/products', async (req, res) => {
 let query = supabase
   .from('products')
   .select('*')
-  .order('sort_order', { ascending: true })    // TRI PAR VOTRE NOUVELLE COLONNE
+  .order('sort_order', { ascending: true })    
   .order('category', { ascending: true })     
   .order('name', { ascending: true });         
 

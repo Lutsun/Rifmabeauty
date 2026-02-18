@@ -13,10 +13,25 @@ export default function ProductCard({ product, onProductClick, onAddToCart }: Pr
       onClick={() => onProductClick(product.id)}
     >
       <div className="relative overflow-hidden bg-stone-100 aspect-square mb-4">
+        {/* Badge de stock */}
+        <div className="absolute top-3 left-3 z-10">
+          {product.inStock ? (
+            <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+              ✓ En stock
+            </span>
+          ) : (
+            <span className="px-3 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+              ✕ Sold out
+            </span>
+          )}
+        </div>
+        
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+          className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ${
+            !product.inStock ? 'opacity-50' : ''
+          }`}
           onError={(e) => {
             e.currentTarget.src = '/assets/images/placeholder.jpg';
           }}
@@ -35,20 +50,12 @@ export default function ProductCard({ product, onProductClick, onAddToCart }: Pr
           <p className="text-sm text-gray-400 font-light">{product.shade}</p>
         )}
         <p className="text-lg font-light text-gray-900">{product.price} FCFA</p>
-        {product.stock <= 5 && product.stock > 0 && (
-          <p className="text-xs text-amber-600 font-light">
-            Plus que {product.stock} disponible{product.stock > 1 ? 's' : ''}
-          </p>
-        )}
-        {!product.inStock && (
-          <p className="text-xs text-red-600 font-light">Rupture de stock</p>
-        )}
       </div>
       
-      {product.inStock && (
+      {product.inStock ? (
         <button
           onClick={(e) => {
-            e.stopPropagation(); // Empêche le clic sur la carte produit
+            e.stopPropagation();
             if (onAddToCart) {
               onAddToCart(product);
             }
@@ -57,6 +64,15 @@ export default function ProductCard({ product, onProductClick, onAddToCart }: Pr
         >
           <span className="text-sm font-light tracking-wider">
             Ajouter au panier
+          </span>
+        </button>
+      ) : (
+        <button
+          disabled
+          className="w-full mt-4 py-3 border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+        >
+          <span className="text-sm font-light tracking-wider">
+            Sold out
           </span>
         </button>
       )}

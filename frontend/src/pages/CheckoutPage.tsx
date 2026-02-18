@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useCart } from '../components/CartContext';
-import { Loader2, Truck, Shield } from 'lucide-react'; // Ajout de Shield et CreditCard
+import { Loader2, Truck, Shield, Tag, X } from 'lucide-react';
 
-// Ajoutez l'interface pour les props
 interface CheckoutPageProps {
-  onNavigate?: (page: string, id?: string) => void; 
+  onNavigate?: (page: string, id?: string) => void;
 }
 
 export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
@@ -26,17 +25,75 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
     additionalInfo: ''
   });
 
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const [promoError, setPromoError] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderData, setOrderData] = useState<any>(null);
 
   const subtotal = getCartTotal();
   const shippingFee = 0;
-  const total = subtotal + shippingFee;
+  
+  // Calcul du total avec réduction
+  const discountAmount = appliedPromo ? 
+    appliedPromo.discount_type === 'percentage' ? 
+      Math.round(subtotal * (appliedPromo.discount_value / 100)) : 
+      Math.min(appliedPromo.discount_value, subtotal) 
+    : 0;
+  
+  const finalSubtotal = subtotal - discountAmount;
+  const total = finalSubtotal + shippingFee;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Validation du code promo
+  const validatePromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoError('Veuillez entrer un code promo');
+      return;
+    }
+
+    setPromoLoading(true);
+    setPromoError('');
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/promo/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: promoCode })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setAppliedPromo(result.data);
+        setPromoError('');
+        // Optionnel : vider le champ après application
+        setPromoCode('');
+      } else {
+        setPromoError(result.message);
+        setAppliedPromo(null);
+      }
+    } catch (error) {
+      console.error('Erreur validation code promo:', error);
+      setPromoError('Erreur lors de la validation du code');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  // Supprimer le code promo appliqué
+  const removePromoCode = () => {
+    setAppliedPromo(null);
+    setPromoError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +110,7 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
       };
 
       const orderItems = items.map(item => ({
-        id: item.id, // UUID - pour decrement_stock
+        id: item.id,
         productId: item.productId,
         name: item.name,
         price: item.price,
@@ -61,7 +118,6 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
         image: item.image,
         shade: item.shade
       }));
-      
 
       const orderPayload = {
         customer_email: formData.email,
@@ -71,7 +127,8 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
         items: orderItems,
         subtotal: subtotal,
         shipping_fee: shippingFee,
-        notes: formData.additionalInfo
+        notes: formData.additionalInfo,
+        promo_code: appliedPromo?.code // Ajout du code promo
       };
 
       setShippingAddress(shippingAddressData);
@@ -101,7 +158,6 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
     }
   };
 
-  // Modifiez cette partie pour utiliser onNavigate si disponible
   const handleBackToHome = () => {
     if (onNavigate) {
       onNavigate('home');
@@ -110,6 +166,7 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
     }
   };
 
+  // Affichage de la confirmation de commande
   if (orderSuccess && orderData) {
     return (
       <div className="min-h-screen pt-20 bg-stone-50">
@@ -135,19 +192,36 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                 <p className="text-lg font-light text-gray-900">{orderData.order_number}</p>
               </div>
               
+              {/* Affichage des détails de réduction si applicable */}
+              {orderData.discount_amount > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500">Réduction appliquée</p>
+                  <p className="text-lg font-light text-green-600">
+                    -{orderData.discount_amount} FCFA
+                  </p>
+                  {orderData.discount_details && (
+                    <p className="text-xs text-gray-500">
+                      Code: {orderData.discount_details.code} ({orderData.discount_details.value}%)
+                    </p>
+                  )}
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <p className="text-sm text-gray-500">Montant total</p>
-                <p className="text-2xl font-light text-gray-900">{orderData.total_amount} FCFA</p>
+                <p className="text-2xl font-light text-gray-900">
+                  {orderData.total_amount} FCFA
+                  {orderData.discount_amount > 0 && (
+                    <span className="text-sm text-gray-400 line-through ml-2">
+                      {orderData.original_subtotal} FCFA
+                    </span>
+                  )}
+                </p>
               </div>
               
               <div className="space-y-2">
                 <p className="text-sm text-gray-500">Mode de paiement</p>
                 <p className="font-light text-gray-900">Paiement à la livraison</p>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm text-gray-500">Statut</p>
-                <p className="font-light text-green-600">En attente de confirmation</p>
               </div>
             </div>
             
@@ -172,7 +246,6 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
   return (
     <div className="min-h-screen pt-20 bg-stone-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Bouton Retour avec l'icône Truck pour plus de cohérence */}
         <div className="mb-8">
           <button
             onClick={() => onNavigate ? onNavigate('shop') : window.history.back()}
@@ -369,27 +442,95 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                 ))}
               </div>
               
+              {/* Section Code Promo */}
+              <div className="border-t border-gray-200 pt-4 mb-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                  <Tag className="w-4 h-4 mr-2" />
+                  Code promo
+                </h3>
+                
+                {appliedPromo ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-green-700 font-medium">{appliedPromo.code}</span>
+                      <p className="text-xs text-green-600 mt-1">
+                        {appliedPromo.discount_type === 'percentage' 
+                          ? `${appliedPromo.discount_value}% de réduction appliqué` 
+                          : `${appliedPromo.discount_value} FCFA de réduction appliqué`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={removePromoCode}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      placeholder="Entrez votre code"
+                      className="flex-1 px-3 py-2 border border-gray-300 focus:border-black focus:outline-none text-sm"
+                      disabled={promoLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={validatePromoCode}
+                      disabled={promoLoading || !promoCode.trim()}
+                      className="px-4 py-2 bg-black text-white text-sm hover:bg-gray-900 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
+                    >
+                      {promoLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Appliquer'
+                      )}
+                    </button>
+                  </div>
+                )}
+                
+                {promoError && (
+                  <p className="text-red-500 text-xs mt-2">{promoError}</p>
+                )}
+              </div>
+              
               <div className="border-t border-gray-200 pt-4 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Sous-total</span>
                   <span className="font-light">{subtotal} FCFA</span>
                 </div>
                 
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Réduction ({appliedPromo?.code})</span>
+                    <span className="font-medium">-{discountAmount} FCFA</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Livraison</span>
-                  <span className="font-light text-green-600 flex items-center gap-1">
-                    Tarif flexible selon votre zone - Nous consulter
+                  <span className="font-light text-green-600">
+                    Tarif flexible - Nous consulter
                   </span>
                 </div>
                 
                 <div className="flex justify-between text-lg pt-4 border-t border-gray-200">
                   <span className="font-light">Total</span>
-                  <span className="font-light">{total} FCFA</span>
+                  <div className="text-right">
+                    <span className="font-light">{total} FCFA</span>
+                    {discountAmount > 0 && (
+                      <div className="text-xs text-gray-500">
+                        (Économie: {discountAmount} FCFA)
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
             
-            {/* Section Paiement améliorée - Complétée pour correspondre à ProductDetail */}
+            {/* Section Paiement */}
             <div className="border-t border-gray-200 pt-8 space-y-6">
               <div className="flex items-start space-x-4">
                 <Truck className="w-6 h-6 text-gray-500 mt-1 flex-shrink-0" />
@@ -414,9 +555,7 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                       Vous pouvez régler votre commande avec :
                     </p>
                     
-                    {/* Icônes de paiement */}
                     <div className="flex flex-wrap gap-4 items-center mt-4">
-                      {/* Wave */}
                       <div className="flex flex-col items-center group">
                         <div className="w-16 h-10 bg-[#00B2A9] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
                           <span className="text-white font-bold text-sm tracking-wide">WAVE</span>
@@ -424,7 +563,6 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                         <span className="text-xs text-gray-500 font-light">Mobile Money</span>
                       </div>
                       
-                      {/* Orange Money */}
                       <div className="flex flex-col items-center group">
                         <div className="w-16 h-10 bg-[#FF6600] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
                           <span className="text-white font-bold text-xs tracking-wide">ORANGE</span>
@@ -432,7 +570,6 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                         <span className="text-xs text-gray-500 font-light">Mobile Money</span>
                       </div>
                       
-                      {/* Visa */}
                       <div className="flex flex-col items-center group">
                         <div className="w-16 h-10 bg-gradient-to-r from-[#1A1F71] to-[#2A3284] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
                           <span className="text-white font-bold text-xl tracking-tighter">VISA</span>
@@ -440,7 +577,6 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                         <span className="text-xs text-gray-500 font-light">Carte bancaire</span>
                       </div>
                       
-                      {/* Mastercard */}
                       <div className="flex flex-col items-center group">
                         <div className="w-16 h-10 bg-gradient-to-r from-[#EB001B] to-[#FF5F00] rounded-lg flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-105 group-hover:shadow-md">
                           <span className="text-white font-bold text-sm tracking-wide">Mastercard</span>
@@ -452,12 +588,19 @@ export default function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                 </div>
               </div>
               
-              {/* Message d'information */}
               <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 mt-6">
                 <p className="text-sm text-gray-700 font-light">
                   <span className="font-medium text-rose-700">💡 Bon à savoir : </span>
                   Vous pouvez également payer en espèces si vous le souhaitez. 
                   Notre livreur vous apportera votre commande avec une machine de paiement mobile.
+                </p>
+              </div>
+
+              {/* Message pour les codes promo */}
+              <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
+                <p className="text-sm text-gray-700 font-light">
+                  <span className="font-medium text-purple-700">🎫 Codes promo disponibles : </span>
+                  Utilisez <span className="font-bold">OUMOU10</span> ou <span className="font-bold">RIFMA10</span> pour 10% de réduction sur votre commande !
                 </p>
               </div>
             </div>

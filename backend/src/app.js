@@ -331,7 +331,8 @@ app.post('/api/orders', async (req, res) => {
       items,
       subtotal,
       shipping_fee = 0,
-      notes
+      notes,
+      promo_code // Nouveau champ pour le code promo
     } = req.body;
 
     // Validation
@@ -365,23 +366,71 @@ app.post('/api/orders', async (req, res) => {
       }
     }
 
-    // 2. Calculer le total
-    const total_amount = subtotal + shipping_fee;
+    // 2. Gérer le code promo si présent
+    let discount_amount = 0;
+    let final_subtotal = subtotal;
+    let discount_details = null;
+
+    if (promo_code) {
+      console.log(`🎫 Application du code promo: ${promo_code}`);
+      
+      // Récupérer le code promo
+      const { data: promo, error: promoError } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .eq('code', promo_code.toUpperCase())
+        .eq('active', true)
+        .single();
+
+      if (!promoError && promo) {
+        // Vérifier les conditions
+        const now = new Date();
+        const isValid = (!promo.valid_until || new Date(promo.valid_until) >= now) &&
+                       (!promo.valid_from || new Date(promo.valid_from) <= now) &&
+                       (!promo.max_uses || promo.used_count < promo.max_uses) &&
+                       (!promo.min_purchase || subtotal >= promo.min_purchase);
+
+        if (isValid) {
+          // Calculer la réduction
+          if (promo.discount_type === 'percentage') {
+            discount_amount = Math.round(subtotal * (promo.discount_value / 100));
+          } else if (promo.discount_type === 'fixed') {
+            discount_amount = Math.min(promo.discount_value, subtotal);
+          }
+          
+          final_subtotal = subtotal - discount_amount;
+          
+          discount_details = {
+            code: promo.code,
+            type: promo.discount_type,
+            value: promo.discount_value,
+            amount: discount_amount
+          };
+          
+          // Incrémenter le compteur d'utilisations DIRECTEMENT
+          await supabase
+            .from('promo_codes')
+            .update({ used_count: promo.used_count + 1 })
+            .eq('id', promo.id);
+        }
+      }
+    }
+
+    // 3. Calculer le total final
+    const total_amount = final_subtotal + shipping_fee;
     
-    // 3. Générer un numéro de commande unique
+    // 4. Générer un numéro de commande unique
     const order_number = 'RIFMA-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
-    // 4. GÉRER LE CLIENT AUTOMATIQUEMENT
+    // 5. Gérer le client
     const customer = await manageCustomer(
       customer_email,
       customer_name,
       customer_phone,
       shipping_address
     );
-    
-    console.log(`👤 Client ${customer ? 'géré' : 'non géré'}: ${customer_email}`);
 
-    // 5. Créer la commande
+    // 6. Créer la commande avec les infos de réduction (SANS promo_id)
     const { data: order, error } = await supabase
       .from('orders')
       .insert([{
@@ -394,6 +443,9 @@ app.post('/api/orders', async (req, res) => {
         subtotal,
         shipping_fee,
         total_amount,
+        discount_amount,
+        discount_details,
+        promo_code: promo_code || null,
         payment_method: 'cash_on_delivery',
         payment_status: 'pending',
         notes,
@@ -404,87 +456,167 @@ app.post('/api/orders', async (req, res) => {
 
     if (error) throw error;
 
-    // 6. Mettre à jour les stocks
+    // 7. Mettre à jour les stocks
     try {
-      console.log('📊 Début décrémentation stock pour', items.length, 'produits');
-      
       for (const item of items) {
-        console.log(`📦 Décrémentation: ${item.name} -${item.quantity}`);
-        console.log('Item complet:', JSON.stringify(item, null, 2));
-        
-        // Si pas d'UUID, chercher le produit par productId
         let productUuid = item.id;
         
         if (!productUuid || productUuid.length < 36) {
-          // Ce n'est pas un UUID, chercher l'UUID correspondant
-          console.log(`🔄 Recherche UUID pour productId: ${item.productId}`);
-          
-          const { data: product, error: findError } = await supabase
+          const { data: product } = await supabase
             .from('products')
             .select('id')
             .eq('product_id', item.productId)
             .single();
           
-          if (findError || !product) {
-            console.error(`❌ Produit non trouvé: ${item.productId}`);
-            continue;
+          if (product) {
+            productUuid = product.id;
           }
-          
-          productUuid = product.id;
-          console.log(`✅ UUID trouvé: ${productUuid}`);
         }
         
-        // Décrémenter le stock avec l'UUID
-        const { error } = await supabase.rpc('decrement_stock', {
-          product_uuid: productUuid,
-          decrement_by: item.quantity
-        });
-        
-        if (error) {
-          console.error(`❌ Erreur décrémentation pour ${item.name}:`, error);
-        } else {
-          console.log(`✅ Stock décrémenté pour ${item.name}`);
+        if (productUuid) {
+          await supabase.rpc('decrement_stock', {
+            product_uuid: productUuid,
+            decrement_by: item.quantity
+          });
         }
       }
-    } catch (error) {
-      console.error('🔥 Erreur globale décrémentation stock:', error);
+    } catch (stockError) {
+      console.error('🔥 Erreur mise à jour stock:', stockError);
     }
 
-    // 7. METTRE À JOUR LES STATS DU CLIENT
+    // 8. Mettre à jour les stats du client
     await updateCustomerStats(customer_email, total_amount);
 
-    // 8. Envoyer les emails (si le service email est configuré)
+    // 9. Envoyer les emails
     try {
       const emailService = require('./services/emailService');
       await emailService.sendOrderNotification(order);
       await emailService.sendOrderConfirmation(order);
-      console.log(`📧 Emails envoyés pour la commande #${order.order_number}`);
     } catch (emailError) {
-      console.log('⚠️ Emails non envoyés (service non configuré):', emailError.message);
+      console.log('⚠️ Emails non envoyés:', emailError.message);
     }
 
+    // 10. Réponse avec les infos de réduction
     res.status(201).json({
       success: true,
-      message: 'Commande créée avec succès! Paiement à la livraison.',
+      message: 'Commande créée avec succès!',
       data: {
         order_id: order.id,
         order_number: order.order_number,
+        original_subtotal: subtotal,
+        discount_amount: discount_amount,
+        final_subtotal: final_subtotal,
         total_amount: order.total_amount,
+        discount_details: discount_details,
         status: order.status,
         payment_method: order.payment_method,
         payment_status: order.payment_status,
         created_at: order.created_at,
-        estimated_delivery: '2-3 jours ouvrables',
+        estimated_delivery: '1-2 jours ouvrables',
         customer: {
           email: customer_email,
-          has_customer_record: !!customer,
-          message: customer ? 'Vos informations ont été enregistrées pour vos prochaines commandes!' : 'Problème avec l\'enregistrement client'
+          has_customer_record: !!customer
         }
       }
     });
+
   } catch (error) {
-    console.error('Erreur création commande:', error);
+    console.error('🔥 Erreur création commande:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Route pour vérifier et valider un code promo
+app.post('/api/promo/validate', async (req, res) => {
+  try {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Code promo requis'
+      });
+    }
+
+    console.log(`🎫 Validation du code promo: ${code}`);
+
+    // Récupérer le code promo depuis la base de données
+    const { data: promo, error } = await supabase
+      .from('promo_codes')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .eq('active', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error('❌ Erreur lors de la récupération du code promo:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la validation du code'
+      });
+    }
+
+    // Si le code n'existe pas
+    if (!promo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Code promo invalide'
+      });
+    }
+
+    // Vérifier si le code a expiré
+    const now = new Date();
+    if (promo.valid_until && new Date(promo.valid_until) < now) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce code promo a expiré'
+      });
+    }
+
+    // Vérifier si le code n'a pas encore commencé
+    if (promo.valid_from && new Date(promo.valid_from) > now) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce code promo n\'est pas encore valide'
+      });
+    }
+
+    // Vérifier le nombre d'utilisations maximum
+    if (promo.max_uses && promo.used_count >= promo.max_uses) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce code promo a atteint sa limite d\'utilisations'
+      });
+    }
+
+    // Calculer la réduction en fonction du type
+    let discountAmount = 0;
+    if (promo.discount_type === 'percentage') {
+      discountAmount = promo.discount_value; // Ex: 10 pour 10%
+    } else if (promo.discount_type === 'fixed') {
+      discountAmount = promo.discount_value; // Montant fixe en FCFA
+    }
+
+    res.json({
+      success: true,
+      message: 'Code promo valide!',
+      data: {
+        id: promo.id,
+        code: promo.code,
+        discount_type: promo.discount_type,
+        discount_value: promo.discount_value,
+        discount_amount: discountAmount,
+        description: promo.description,
+        min_purchase: promo.min_purchase || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('🔥 Erreur validation code promo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
   }
 });
 

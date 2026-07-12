@@ -115,7 +115,12 @@ export default function Shop({ onNavigate }: ShopProps) {
   };
 
   const scrollToBodyCare = () => {
-    bodyCareSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Réinitialiser la sélection de collection pour afficher toutes les sections
+    setSelectedCollection('all');
+    // Attendre que le state soit mis à jour et que le DOM soit rendu
+    setTimeout(() => {
+      bodyCareSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
   };
 
   if (loading) {
@@ -164,7 +169,6 @@ export default function Shop({ onNavigate }: ShopProps) {
         </div>
       </section>
 
-      {/* Le reste du code reste identique... */}
       {/* Collections */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -304,130 +308,127 @@ export default function Shop({ onNavigate }: ShopProps) {
             </div>
           </section>
         )}
-
-        {selectedCollection === 'all' && (
-          <>
-            {/* Section Glosses & Lip Balms */}
-            <section className="py-16 bg-stone-50">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-8 pb-4 border-b border-gray-200">
-                  <h3 className="text-2xl font-light tracking-wide text-gray-900">
-                    Nos Soins & Glosses
-                  </h3>
-                  <p className="text-gray-500 text-sm font-light mt-1">
-                    {products.length} produits
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-                  {products.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      onProductClick={(id) => onNavigate('product', id)}
-                      onAddToCart={() => addToCart(product)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* Section Lip Balms */}
-            {lipBalms.length > 0 && (
-              <section className="py-16 bg-stone-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="text-center mb-12">
-                    <span className="text-xs font-light tracking-[0.2em] uppercase text-rose-400">
-                      Douceur & Hydratation
-                    </span>
-                    <h2 className="text-3xl md:text-4xl font-light tracking-wide text-gray-900 mt-2">
-                      Lip Balms
-                    </h2>
-                    <div className="w-16 h-px bg-rose-300 mx-auto mt-4 mb-4" />
-                    <p className="text-gray-500 font-light max-w-2xl mx-auto">
-                      Des baumes nourrissants pour des lèvres douces et parfaitement hydratées
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-                    {lipBalms.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onProductClick={(id) => onNavigate('product', id)}
-                        onAddToCart={() => addToCart(product)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Section Body Care */}
-            {bodyCareProducts.length > 0 && (
-              <section ref={bodyCareSectionRef} className="py-20 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  
-                  <div className="text-center mb-12">
-                    <span className="text-xs font-light tracking-[0.2em] uppercase text-rose-400">
-                      Éclat & Hydratation
-                    </span>
-                    <h2 className="text-3xl md:text-4xl font-light tracking-wide text-gray-900 mt-2">
-                      Notre Huile Scintillante
-                    </h2>
-                    <div className="w-16 h-px bg-rose-300 mx-auto mt-4 mb-4" />
-                    <p className="text-gray-500 font-light max-w-2xl mx-auto">
-                      Une formule unique qui enveloppe votre corps d'un voile lumineux et d'une hydratation intense
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-                    {bodyCareProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onProductClick={(id) => onNavigate('product', id)}
-                        onAddToCart={() => addToCart(product)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Section Lips Liners séparée */}
-            {lipLiners.length > 0 && (
-              <section ref={lipLinersSectionRef} className="py-16 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="text-center mb-12">
-                    <span className="text-xs font-light tracking-[0.2em] uppercase text-rose-400">
-                      Précision & Élégance
-                    </span>
-                    <h2 className="text-3xl md:text-4xl font-light tracking-wide text-gray-900 mt-2">
-                      Lips Liners
-                    </h2>
-                    <div className="w-16 h-px bg-rose-300 mx-auto mt-4 mb-4" />
-                    <p className="text-gray-500 font-light max-w-2xl mx-auto">
-                      Des contours précis pour des lèvres parfaitement définies
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-                    {lipLiners.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onProductClick={(id) => onNavigate('product', id)}
-                        onAddToCart={() => addToCart(product)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-          </>
-        )}
       </div>
+
+      {/* Section Glosses & Lip Balms - toujours visible */}
+      {selectedCollection === 'all' && (
+        <section className="py-16 bg-stone-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 pb-4 border-b border-gray-200">
+              <h3 className="text-2xl font-light tracking-wide text-gray-900">
+                Nos Soins & Glosses
+              </h3>
+              <p className="text-gray-500 text-sm font-light mt-1">
+                {products.length} produits
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onProductClick={(id) => onNavigate('product', id)}
+                  onAddToCart={() => addToCart(product)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Section Lip Balms - toujours visible */}
+      {lipBalms.length > 0 && (
+        <section className="py-16 bg-stone-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <span className="text-xs font-light tracking-[0.2em] uppercase text-rose-400">
+                Douceur & Hydratation
+              </span>
+              <h2 className="text-3xl md:text-4xl font-light tracking-wide text-gray-900 mt-2">
+                Lip Balms
+              </h2>
+              <div className="w-16 h-px bg-rose-300 mx-auto mt-4 mb-4" />
+              <p className="text-gray-500 font-light max-w-2xl mx-auto">
+                Des baumes nourrissants pour des lèvres douces et parfaitement hydratées
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              {lipBalms.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onProductClick={(id) => onNavigate('product', id)}
+                  onAddToCart={() => addToCart(product)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Section Body Care - toujours visible avec ref */}
+      {bodyCareProducts.length > 0 && (
+        <section ref={bodyCareSectionRef} className="py-20 bg-white scroll-mt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <span className="text-xs font-light tracking-[0.2em] uppercase text-rose-400">
+                Éclat & Hydratation
+              </span>
+              <h2 className="text-3xl md:text-4xl font-light tracking-wide text-gray-900 mt-2">
+                Notre Huile Scintillante
+              </h2>
+              <div className="w-16 h-px bg-rose-300 mx-auto mt-4 mb-4" />
+              <p className="text-gray-500 font-light max-w-2xl mx-auto">
+                Une formule unique qui enveloppe votre corps d'un voile lumineux et d'une hydratation intense
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              {bodyCareProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onProductClick={(id) => onNavigate('product', id)}
+                  onAddToCart={() => addToCart(product)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Section Lips Liners - toujours visible */}
+      {lipLiners.length > 0 && (
+        <section ref={lipLinersSectionRef} className="py-16 bg-white scroll-mt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <span className="text-xs font-light tracking-[0.2em] uppercase text-rose-400">
+                Précision & Élégance
+              </span>
+              <h2 className="text-3xl md:text-4xl font-light tracking-wide text-gray-900 mt-2">
+                Lips Liners
+              </h2>
+              <div className="w-16 h-px bg-rose-300 mx-auto mt-4 mb-4" />
+              <p className="text-gray-500 font-light max-w-2xl mx-auto">
+                Des contours précis pour des lèvres parfaitement définies
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              {lipLiners.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onProductClick={(id) => onNavigate('product', id)}
+                  onAddToCart={() => addToCart(product)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
